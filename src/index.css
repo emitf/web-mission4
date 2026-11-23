@@ -1,16 +1,76 @@
+/* ==========================================================
+   Clear Count · design tokens
+   Minimal and white: the total balance is the hero.
+   Light blue only as soft tints, purple only for the main action,
+   green / red / amber only when they mean something.
+   ========================================================== */
 :root {
-  --bg: #f5f6f2;
-  --surface: #ffffff;
-  --text: #1d2321;
-  --muted: #5c6762;
-  --border: #d8ddd8;
-  --accent: #1f7a5a;
-  --danger: #b3261e;
+  /* Surfaces and text */
+  --bg: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --divider: #f1f3f5;
+  --border: #e5e7eb;
 
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Light blue tints (icons and summary tiles) */
+  --blue: #2f80d1;
+  --blue-tint: #eaf4fd;
+  --tile: #f4f8fd;
+
+  /* Purple: only the primary button and the savings icon */
+  --primary: #6d5bd0;
+  --primary-hover: #5b4ac0;
+  --primary-tint: #f1effe;
+  --on-primary: #ffffff;
+
+  /* Colours with meaning */
+  --positive: #15803d; /* money owed to you */
+  --negative: #b91c1c; /* money you owe */
+  --warning: #b45309; /* overdue IOUs */
+
+  /* Focus ring, visible on every interactive element */
+  --focus: #6d5bd0;
+
+  /* Shape and type */
+  --radius-pill: 999px;
+  --radius-tile: 16px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --size-hero: 2.125rem; /* ≈ 34px: the total balance */
+
+  font-family: var(--font);
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dark mode: same tokens, darker values */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --text: #f3f4f6;
+    --muted: #9ca3af;
+    --divider: #1f2329;
+    --border: #2a2f37;
+
+    --blue: #6aaef0;
+    --blue-tint: #16263a;
+    --tile: #151b24;
+
+    --primary: #8b7cf0;
+    --primary-hover: #9d90f3;
+    --primary-tint: #221d3d;
+    --on-primary: #0f1115;
+
+    --positive: #4ade80;
+    --negative: #f87171;
+    --warning: #fbbf24;
+
+    --focus: #a79bf5;
+
+    color-scheme: dark;
+  }
 }
 
 *,
@@ -21,6 +81,7 @@
 
 body {
   margin: 0;
+  background: var(--bg);
 }
 
 h1,
@@ -28,36 +89,52 @@ h2,
 h3 {
   line-height: 1.2;
   margin: 0 0 0.5rem;
+  font-weight: 600;
 }
 
+/* Visible focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Layout ---------- */
 .app-header {
-  padding: 1.5rem 1rem;
-  background: var(--accent);
-  color: #ffffff;
-  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 0.5rem;
+}
+
+.app-header h1 {
+  font-size: 1.25rem;
+  margin: 0;
 }
 
 .tagline {
   margin: 0;
-  opacity: 0.9;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .page {
-  max-width: 960px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 1rem;
   display: grid;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
+/* Sections are flat: no boxed cards, shadows or gradients */
+.section h2 {
+  font-size: 1rem;
 }
 
 .muted {
   color: var(--muted);
   margin: 0;
+}
+
+/* Numbers line up in columns */
+.amount {
+  font-variant-numeric: tabular-nums;
 }
