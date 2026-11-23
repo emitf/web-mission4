@@ -1,18 +1,96 @@
 {
   "accounts": [
-    { "id": "1", "name": "Main bank", "type": "bank", "currency": "EUR", "openingBalance": 850.0 },
-    { "id": "2", "name": "Savings", "type": "savings", "currency": "EUR", "openingBalance": 2400.0 },
-    { "id": "3", "name": "Wallet (euros)", "type": "cash", "currency": "EUR", "openingBalance": 60.0 },
-    { "id": "4", "name": "Wallet (dollars)", "type": "cash", "currency": "USD", "openingBalance": 120.0 }
+    {
+      "id": "main-bank",
+      "name": "Main bank",
+      "type": "bank",
+      "currency": "EUR",
+      "openingBalance": 850
+    },
+    {
+      "id": "savings",
+      "name": "Savings",
+      "type": "savings",
+      "currency": "EUR",
+      "openingBalance": 2400
+    },
+    {
+      "id": "cash-eur",
+      "name": "Wallet (euros)",
+      "type": "cash",
+      "currency": "EUR",
+      "openingBalance": 60
+    },
+    {
+      "id": "cash-usd",
+      "name": "Wallet (dollars)",
+      "type": "cash",
+      "currency": "USD",
+      "openingBalance": 120
+    }
   ],
   "movements": [
-    { "id": "1", "type": "income", "amount": 300.0, "accountId": "1", "category": "", "description": "Part-time job", "date": "2026-11-01" },
-    { "id": "2", "type": "expense", "amount": 42.35, "accountId": "1", "category": "groceries", "description": "Weekly shop", "date": "2026-11-03" },
-    { "id": "3", "type": "expense", "amount": 12.5, "accountId": "3", "category": "eating-out", "description": "Lunch with friends", "date": "2026-11-05" },
-    { "id": "4", "type": "transfer", "amount": 50.0, "accountId": "1", "toAccountId": "4", "receivedAmount": 54.2, "category": "", "description": "Euros to dollars for the trip", "date": "2026-11-10" }
+    {
+      "id": "1",
+      "type": "income",
+      "amount": 300,
+      "accountId": "main-bank",
+      "category": "",
+      "description": "Part-time job",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "2",
+      "type": "expense",
+      "amount": 42.35,
+      "accountId": "main-bank",
+      "category": "groceries",
+      "description": "Weekly shop",
+      "date": "2026-11-03"
+    },
+    {
+      "id": "3",
+      "type": "expense",
+      "amount": 12.5,
+      "accountId": "cash-eur",
+      "category": "eating-out",
+      "description": "Lunch with friends",
+      "date": "2026-11-05"
+    },
+    {
+      "id": "4",
+      "type": "transfer",
+      "amount": 50,
+      "accountId": "main-bank",
+      "toAccountId": "cash-usd",
+      "receivedAmount": 54.2,
+      "category": "",
+      "description": "Euros to dollars for the trip",
+      "date": "2026-11-10"
+    }
   ],
   "ious": [
-    { "id": "1", "person": "Lucía", "direction": "owedToMe", "amount": 25.0, "currency": "EUR", "dateLent": "2026-11-02", "dueDate": "2026-11-16", "settled": false, "note": "Concert ticket" },
-    { "id": "2", "person": "Marco", "direction": "iOwe", "amount": 15.0, "currency": "USD", "dateLent": "2026-11-08", "dueDate": "2026-12-01", "settled": false, "note": "Taxi from the airport" }
+    {
+      "id": "1",
+      "person": "Lucía",
+      "direction": "owedToMe",
+      "amount": 25,
+      "currency": "EUR",
+      "dateLent": "2026-11-02",
+      "dueDate": "2026-11-16",
+      "settled": false,
+      "note": "Concert ticket"
+    },
+    {
+      "id": "2",
+      "person": "Marco",
+      "direction": "iOwe",
+      "amount": 15,
+      "currency": "USD",
+      "dateLent": "2026-11-08",
+      "dueDate": "2026-12-01",
+      "settled": false,
+      "note": "Taxi from the airport"
+    }
   ]
 }
