@@ -7,7 +7,14 @@ import App from "./App.jsx";
 
 // One QueryClient for the whole app: it holds the cache of server data
 // (accounts, movements, IOUs and exchange rates).
-const queryClient = new QueryClient();
+// By default Query retries a failed request 3 times (≈ 7 seconds) before
+// showing the error. My server is on my own laptop: if it fails once it's
+// almost always just switched off, so 1 retry is enough and the user finds out sooner.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1 },
+  },
+});
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

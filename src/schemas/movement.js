@@ -3,16 +3,23 @@ import { amountSchema, idSchema, pastDateSchema } from "./common.js";
 
 export const MOVEMENT_TYPES = ["income", "expense", "transfer"];
 
-export const CATEGORIES = [
-  "groceries",
-  "eating-out",
-  "transport",
-  "rent",
-  "leisure",
-  "education",
-  "health",
-  "other",
-];
+// The value saved in the database → the text shown on screen
+export const CATEGORY_LABELS = {
+  groceries: "Groceries",
+  "eating-out": "Eating out",
+  transport: "Transport",
+  rent: "Rent",
+  shopping: "Shopping",
+  subscriptions: "Subscriptions",
+  leisure: "Leisure",
+  travel: "Travel",
+  gifts: "Gifts",
+  education: "Education",
+  health: "Health",
+  other: "Other",
+};
+
+export const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
 // The plain fields of a movement, shared by the form and the API response.
 const movementFields = z.object({
