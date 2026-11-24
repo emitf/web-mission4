@@ -4,7 +4,7 @@ import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
 // Uses the same hook as TotalBalance: the accounts and movements come from the
 // cache, so opening this list does not send a second request.
-function AccountList({ displayCurrency }) {
+function AccountList({ displayCurrency, onAdd, onEdit }) {
   const { accountsQuery, rateQuery, balances, isPending, isError, error, isFetching, refetch } =
     useBalances(displayCurrency);
 
@@ -13,6 +13,9 @@ function AccountList({ displayCurrency }) {
       <div className="title-row">
         <h2 id="accounts-title">Accounts</h2>
         <UpdatingBadge show={isFetching && !isPending} />
+        <button type="button" className="link-button" onClick={onAdd}>
+          + Add account
+        </button>
       </div>
 
       {isPending && <LoadingRows label="Loading your accounts…" rows={4} />}
@@ -31,6 +34,7 @@ function AccountList({ displayCurrency }) {
               balanceCents={balances[account.id]}
               displayCurrency={displayCurrency}
               rate={rateQuery.data?.rate}
+              onEdit={() => onEdit(account)}
             />
           ))}
         </ul>

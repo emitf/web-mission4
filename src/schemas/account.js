@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { balanceSchema, currencySchema, idSchema } from "./common.js";
+import { balanceSchema, currencySchema, idSchema, onlyNeeds } from "./common.js";
 
 export const ACCOUNT_TYPES = ["bank", "savings", "cash"];
 
@@ -18,17 +18,28 @@ const accountFields = z.object({
 // Rules that compare fields with each other.
 // A bank account can be overdrawn, but a wallet can't hold less than nothing.
 function accountRules(schema) {
-  return schema.refine(
-    (account) => !(account.type === "cash" && account.openingBalance < 0),
-    {
-      error: "A cash account can't start with a negative balance",
-      path: ["openingBalance"],
-    },
-  );
+  return schema.refine((account) => !(account.type === "cash" && account.openingBalance < 0), {
+    error: "A cash account can't start with a negative balance",
+    path: ["openingBalance"],
+    ...onlyNeeds("type", "openingBalance"),
+  });
 }
 
 // What the "new account" form checks.
 export const accountFormSchema = accountRules(accountFields);
+
+// The form also checks that the name isn't already used by another account.
+// `takenNames` comes from the accounts already loaded (when editing, it leaves
+// out the account being edited, so keeping its own name is fine).
+// Compared without caring about capitals or spaces: "BBVA" = " bbva ".
+export function makeAccountFormSchema(takenNames) {
+  const taken = takenNames.map((name) => name.trim().toLowerCase());
+  return accountFormSchema.refine((account) => !taken.includes(account.name.toLowerCase()), {
+    error: "You already have an account with this name",
+    path: ["name"],
+    ...onlyNeeds("name"),
+  });
+}
 
 // What the server must send back: the same fields plus an id.
 export const accountSchema = accountRules(accountFields.extend({ id: idSchema }));

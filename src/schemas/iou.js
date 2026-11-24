@@ -4,6 +4,7 @@ import {
   currencySchema,
   idSchema,
   isoDateSchema,
+  onlyNeeds,
   pastDateSchema,
 } from "./common.js";
 
@@ -32,6 +33,7 @@ function iouRules(schema) {
   return schema.refine((iou) => iou.dueDate >= iou.dateLent, {
     error: "The due date can't be before the date you lent it",
     path: ["dueDate"],
+    ...onlyNeeds("dateLent", "dueDate"),
   });
 }
 
@@ -39,7 +41,5 @@ function iouRules(schema) {
 export const iouFormSchema = iouRules(iouFields);
 
 // What the server must send back: the same fields plus an id and whether it's paid.
-export const iouSchema = iouRules(
-  iouFields.extend({ id: idSchema, settled: z.boolean() }),
-);
+export const iouSchema = iouRules(iouFields.extend({ id: idSchema, settled: z.boolean() }));
 export const iouListSchema = z.array(iouSchema);

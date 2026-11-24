@@ -3,7 +3,7 @@ import { formatMoney, toDisplayCents } from "../utils/money.js";
 
 const TYPE_LABELS = { bank: "Bank", savings: "Savings", cash: "Cash" };
 
-function AccountRow({ account, balanceCents, displayCurrency, rate }) {
+function AccountRow({ account, balanceCents, displayCurrency, rate, onEdit }) {
   // If the account is in the other currency, also show roughly what it's worth
   const converted =
     account.currency !== displayCurrency
@@ -11,26 +11,32 @@ function AccountRow({ account, balanceCents, displayCurrency, rate }) {
       : null;
 
   return (
-    <li className="row">
-      <span className={`icon-circle ${account.type === "savings" ? "icon-circle-primary" : ""}`}>
-        <Icon name={account.type} />
-      </span>
-
-      <span className="row-main">
-        <span className="row-title">{account.name}</span>
-        <span className="row-sub">
-          {TYPE_LABELS[account.type]} · {account.currency}
+    <li>
+      {/* The whole row is a button: click (or Enter) to edit the account */}
+      <button type="button" className="row row-button" onClick={onEdit}>
+        <span className={`icon-circle ${account.type === "savings" ? "icon-circle-primary" : ""}`}>
+          <Icon name={account.type} />
         </span>
-      </span>
 
-      <span className="row-end">
-        <span className={`row-amount amount ${balanceCents < 0 ? "negative" : ""}`}>
-          {formatMoney(balanceCents, account.currency)}
+        <span className="row-main">
+          <span className="row-title">
+            <span className="visually-hidden">Edit </span>
+            {account.name}
+          </span>
+          <span className="row-sub">
+            {TYPE_LABELS[account.type]} · {account.currency}
+          </span>
         </span>
-        {converted !== null && (
-          <span className="row-sub amount">≈ {formatMoney(converted, displayCurrency)}</span>
-        )}
-      </span>
+
+        <span className="row-end">
+          <span className={`row-amount amount ${balanceCents < 0 ? "negative" : ""}`}>
+            {formatMoney(balanceCents, account.currency)}
+          </span>
+          {converted !== null && (
+            <span className="row-sub amount">≈ {formatMoney(converted, displayCurrency)}</span>
+          )}
+        </span>
+      </button>
     </li>
   );
 }

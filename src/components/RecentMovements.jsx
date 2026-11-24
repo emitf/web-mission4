@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts } from "../services/accounts.js";
-import { getMovements } from "../services/movements.js";
+import { deleteMovement, getMovements } from "../services/movements.js";
 import { queryKeys } from "../queryKeys.js";
 import { CATEGORY_LABELS } from "../schemas/movement.js";
 import { formatMoney, formatShortDate, toCents } from "../utils/money.js";
@@ -15,7 +15,11 @@ function RecentMovements() {
   const accountsQuery = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
 
   const isPending = movementsQuery.isPending || accountsQuery.isPending;
-  const failed = movementsQuery.isError ? movementsQuery : accountsQuery.isError ? accountsQuery : null;
+  const failed = movementsQuery.isError
+    ? movementsQuery
+    : accountsQuery.isError
+      ? accountsQuery
+      : null;
 
   // Newest first, only the last few
   const recent = [...(movementsQuery.data ?? [])]
@@ -33,11 +37,11 @@ function RecentMovements() {
       </div>
 
       {isPending && <LoadingRows label="Loading your movements…" rows={3} />}
-      {failed && <QueryError error={failed.error} onRetry={() => failed.refetch()} what="your movements" />}
-
-      {!isPending && !failed && recent.length === 0 && (
-        <p className="empty">No movements yet.</p>
+      {failed && (
+        <QueryError error={failed.error} onRetry={() => failed.refetch()} what="your movements" />
       )}
+
+      {!isPending && !failed && recent.length === 0 && <p className="empty">No movements yet.</p>}
 
       {!isPending && !failed && recent.length > 0 && (
         <ul className="rows">
@@ -51,6 +55,17 @@ function RecentMovements() {
 }
 
 function MovementRow({ movement, accountsById }) {
+  const queryClient = useQueryClient();
+
+  // Each row has its own mutation, so "Deleting…" shows only on this row
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteMovement(movement.id),
+    onSuccess: () => {
+      // Movements changed → balances (calculated from them) update too
+      queryClient.invalidateQueries({ queryKey: queryKeys.movements });
+    },
+  });
+
   const from = accountsById[movement.accountId];
   const to = accountsById[movement.toAccountId];
   const currency = from?.currency ?? "EUR";
@@ -65,6 +80,12 @@ function MovementRow({ movement, accountsById }) {
     movement.type === "transfer"
       ? `${from?.name ?? "?"} → ${to?.name ?? "?"}`
       : [CATEGORY_LABELS[movement.category], from?.name].filter(Boolean).join(" · ");
+
+  function handleDelete() {
+    if (window.confirm(`Delete "${title}"? This can't be undone.`)) {
+      deleteMutation.mutate();
+    }
+  }
 
   return (
     <li className="row">
@@ -90,13 +111,32 @@ function MovementRow({ movement, accountsById }) {
           <>
             <span className="row-amount amount">{formatMoney(-cents, currency)}</span>
             <span className="row-sub amount">
-              {formatMoney(toCents(movement.receivedAmount ?? movement.amount), to?.currency ?? currency, {
-                sign: true,
-              })}
+              {formatMoney(
+                toCents(movement.receivedAmount ?? movement.amount),
+                to?.currency ?? currency,
+                {
+                  sign: true,
+                },
+              )}
             </span>
           </>
         )}
+        {deleteMutation.isError && (
+          <span className="row-error" role="alert">
+            Couldn&apos;t delete. {deleteMutation.error.message}
+          </span>
+        )}
       </span>
+
+      <button
+        type="button"
+        className="icon-button row-delete"
+        aria-label={`Delete "${title}"`}
+        onClick={handleDelete}
+        disabled={deleteMutation.isPending}
+      >
+        {deleteMutation.isPending ? "…" : "×"}
+      </button>
     </li>
   );
 }

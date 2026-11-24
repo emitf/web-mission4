@@ -20,13 +20,18 @@ function emptyToUndefined(value) {
   return value === "" ? undefined : value;
 }
 
-export const amountSchema = z.preprocess(
-  emptyToUndefined,
-  z.coerce
-    .number({ error: "Enter an amount" })
-    .positive("The amount must be greater than 0")
-    .refine(hasAtMostTwoDecimals, { error: "Use at most 2 decimals (cents)" }),
-);
+// A positive money amount. `emptyMessage` lets each field say what's missing.
+export function makeAmountSchema(emptyMessage = "Enter an amount") {
+  return z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number({ error: emptyMessage })
+      .positive("The amount must be greater than 0")
+      .refine(hasAtMostTwoDecimals, { error: "Use at most 2 decimals (cents)" }),
+  );
+}
+
+export const amountSchema = makeAmountSchema();
 
 // Like amountSchema but it can be 0 or negative (a starting balance).
 export const balanceSchema = z.preprocess(
@@ -49,6 +54,16 @@ export const isoDateSchema = z.iso.date({ error: "Enter a valid date" });
 export const pastDateSchema = isoDateSchema.refine((date) => date <= today(), {
   error: "The date can't be in the future",
 });
+
+// By default Zod skips the cross-field rules (.refine) while ANY field still has
+// an error, so an empty form would show "Enter an amount" but not "Choose a
+// category" until the amount was fixed. With `when`, a rule runs as soon as the
+// fields IT uses are fine: submitting an empty form shows every error at once.
+export function onlyNeeds(...fields) {
+  return {
+    when: (payload) => payload.issues.every((issue) => !fields.includes(issue.path?.[0])),
+  };
+}
 
 // What the server adds to every record it stores.
 // json-server v1 creates ids as text ("1", "a3f9").

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { amountSchema, idSchema, pastDateSchema } from "./common.js";
+import { amountSchema, idSchema, makeAmountSchema, onlyNeeds, pastDateSchema } from "./common.js";
 
 export const MOVEMENT_TYPES = ["income", "expense", "transfer"];
 
@@ -28,11 +28,13 @@ const movementFields = z.object({
   accountId: z.string().min(1, "Choose an account"),
   // Only used by transfers
   toAccountId: z.string().optional(),
-  receivedAmount: amountSchema.optional(),
-  // Only expenses need a category; income and transfers leave it empty
-  category: z.union([z.enum(CATEGORIES), z.literal("")], {
-    error: "Choose a category from the list",
-  }),
+  receivedAmount: makeAmountSchema("Enter how much arrived in the other account").optional(),
+  // Only expenses need a category; income and transfers leave it empty (or out)
+  category: z
+    .union([z.enum(CATEGORIES), z.literal("")], {
+      error: "Choose a category from the list",
+    })
+    .optional(),
   description: z.string().trim().max(60, "Keep the description under 60 characters"),
   date: pastDateSchema,
 });
@@ -44,21 +46,42 @@ function movementRules(schema) {
     .refine((m) => m.type !== "transfer" || Boolean(m.toAccountId), {
       error: "Choose the account the money goes to",
       path: ["toAccountId"],
+      ...onlyNeeds("type", "toAccountId"),
     })
     .refine((m) => m.type !== "transfer" || m.toAccountId !== m.accountId, {
       error: "You can't transfer to the same account",
       path: ["toAccountId"],
+      ...onlyNeeds("type", "accountId", "toAccountId"),
     })
-    .refine((m) => m.type !== "expense" || m.category !== "", {
+    .refine((m) => m.type !== "expense" || Boolean(m.category), {
       error: "Choose a category for this expense",
       path: ["category"],
+      ...onlyNeeds("type", "category"),
     });
 }
 
 // What the "new movement" form checks.
-// (Stage 4 adds one more rule that needs the accounts: transfers between
-// different currencies must say how much was received.)
 export const movementFormSchema = movementRules(movementFields);
+
+// The form needs one more rule that depends on my accounts:
+// moving 50 € into a dollar wallet doesn't arrive as 50 $, so a transfer
+// between DIFFERENT currencies must say how much was received.
+// The schema can't know the currencies by itself, so we build it with them.
+export function makeMovementFormSchema(accounts) {
+  const currencyOf = (id) => accounts.find((account) => account.id === id)?.currency;
+
+  return movementFormSchema.refine(
+    (m) =>
+      m.type !== "transfer" ||
+      currencyOf(m.accountId) === currencyOf(m.toAccountId) ||
+      m.receivedAmount !== undefined,
+    {
+      error: "Enter how much arrived in the other account",
+      path: ["receivedAmount"],
+      ...onlyNeeds("type", "accountId", "toAccountId", "receivedAmount"),
+    },
+  );
+}
 
 // What the server must send back: the same fields plus an id.
 export const movementSchema = movementRules(movementFields.extend({ id: idSchema }));
