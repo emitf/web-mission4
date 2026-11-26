@@ -6,6 +6,8 @@
   "scripts": {
     "predev": "node scripts/first-run.js",
     "dev": "concurrently -n web,api -c cyan,magenta \"vite\" \"json-server db.json --port 3001\"",
+    "predev:demo": "node scripts/first-run.js && node scripts/demo-data.js",
+    "dev:demo": "concurrently -n demo-web,demo-api -c green,yellow \"vite --mode demo --port 5174 --strictPort\" \"json-server db.demo.json --port 3002\"",
     "preapi": "node scripts/first-run.js",
     "api": "json-server db.json --port 3001",
     "prebuild": "node scripts/first-run.js",

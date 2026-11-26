@@ -29,5 +29,8 @@ dist-ssr
 # My real money data (the repo only has the fake db.example.json)
 db.json
 
+# The demo's throwaway copy of the example data (npm run dev:demo)
+db.demo.json
+
 # Local editor/assistant settings
 .claude

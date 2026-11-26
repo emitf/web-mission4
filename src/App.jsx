@@ -18,6 +18,7 @@ const PANEL_TITLES = {
   account: "New account",
   editAccount: "Edit account",
   iou: "New IOU",
+  editIou: "Edit IOU",
   settle: "Mark as paid",
 };
 
@@ -67,6 +68,7 @@ function App() {
         <IouList
           onAdd={() => setPanel({ kind: "iou" })}
           onSettle={(iou) => setPanel({ kind: "settle", iou })}
+          onEdit={(iou) => setPanel({ kind: "editIou", iou })}
         />
         <History displayCurrency={displayCurrency} />
       </main>
@@ -78,6 +80,7 @@ function App() {
           <AccountForm account={panel.account} onDone={closePanel} />
         )}
         {panel?.kind === "iou" && <IouForm onDone={closePanel} />}
+        {panel?.kind === "editIou" && <IouForm iou={panel.iou} onDone={closePanel} />}
         {panel?.kind === "settle" && <SettleIouForm iou={panel.iou} onDone={closePanel} />}
       </Dialog>
 

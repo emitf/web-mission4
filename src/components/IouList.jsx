@@ -13,7 +13,7 @@ import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 // Money people owe me and money I owe them.
 // Open ones first (soonest due on top); paid ones can be shown on demand.
-function IouList({ onAdd, onSettle }) {
+function IouList({ onAdd, onSettle, onEdit }) {
   const [showPaid, setShowPaid] = useState(false);
 
   // Same key as the summary tiles → shared cache, one request
@@ -49,7 +49,12 @@ function IouList({ onAdd, onSettle }) {
       {open.length > 0 && (
         <ul className="rows">
           {open.map((iou) => (
-            <IouRow key={iou.id} iou={iou} onSettle={() => onSettle(iou)} />
+            <IouRow
+              key={iou.id}
+              iou={iou}
+              onSettle={() => onSettle(iou)}
+              onEdit={() => onEdit(iou)}
+            />
           ))}
         </ul>
       )}
@@ -79,7 +84,7 @@ function IouList({ onAdd, onSettle }) {
   );
 }
 
-function IouRow({ iou, onSettle }) {
+function IouRow({ iou, onSettle, onEdit }) {
   const queryClient = useQueryClient();
   const recordSnapshot = useRecordSnapshot();
   const owedToMe = iou.direction === "owedToMe";
@@ -129,32 +134,39 @@ function IouRow({ iou, onSettle }) {
 
   return (
     <li className="row">
-      <span className="icon-circle">
-        <Icon name={owedToMe ? "income" : "expense"} />
-      </span>
-
-      <span className="row-main">
-        <span className="row-title">{iou.person}</span>
-        <span className="row-sub">
-          {owedToMe ? "Owes me" : "I owe"}
-          {iou.note ? ` · ${iou.note}` : ""}
-          {iou.settled ? (
-            ` · paid ${iou.settledAt ? formatShortDate(iou.settledAt) : ""}`
-          ) : overdue ? (
-            <span className="overdue">
-              {" "}
-              · overdue {daysLate} {daysLate === 1 ? "day" : "days"}
-            </span>
-          ) : (
-            ` · due ${formatShortDate(iou.dueDate)}`
-          )}
+      {/* Open IOUs: the person + note part is a button that opens "Edit IOU".
+          Paid ones can't be edited: their amount already moved a balance. */}
+      <IouSummary editable={!iou.settled} onEdit={onEdit}>
+        <span className="icon-circle">
+          <Icon name={owedToMe ? "income" : "expense"} />
         </span>
-        {failed && (
-          <span className="row-error" role="alert">
-            {failed.error.message}
+
+        <span className="row-main">
+          <span className="row-title">
+            {!iou.settled && <span className="visually-hidden">Edit </span>}
+            {iou.person}
           </span>
-        )}
-      </span>
+          <span className="row-sub">
+            {owedToMe ? "Owes me" : "I owe"}
+            {iou.note ? ` · ${iou.note}` : ""}
+            {iou.settled ? (
+              ` · paid ${iou.settledAt ? formatShortDate(iou.settledAt) : ""} · undo it to make changes`
+            ) : overdue ? (
+              <span className="overdue">
+                {" "}
+                · overdue {daysLate} {daysLate === 1 ? "day" : "days"}
+              </span>
+            ) : (
+              ` · due ${formatShortDate(iou.dueDate)}`
+            )}
+          </span>
+        </span>
+      </IouSummary>
+      {failed && (
+        <span className="row-error iou-error" role="alert">
+          {failed.error.message}
+        </span>
+      )}
 
       <span className="row-end">
         <span
@@ -195,6 +207,16 @@ function IouRow({ iou, onSettle }) {
         ×
       </ConfirmDelete>
     </li>
+  );
+}
+
+// The clickable part of an open IOU (or a plain wrapper for a paid one)
+function IouSummary({ editable, onEdit, children }) {
+  if (!editable) return <span className="iou-summary">{children}</span>;
+  return (
+    <button type="button" className="iou-summary iou-summary-button" onClick={onEdit}>
+      {children}
+    </button>
   );
 }
 

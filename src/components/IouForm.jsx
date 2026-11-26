@@ -2,10 +2,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { iouFormSchema } from "../schemas/iou.js";
-import { toDotDecimal, today } from "../schemas/common.js";
-import { createIou } from "../services/ious.js";
+import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
+import { createIou, updateIou } from "../services/ious.js";
 import { queryKeys } from "../queryKeys.js";
-import { addDays } from "../utils/money.js";
+import { addDays, toCents } from "../utils/money.js";
 import FieldError from "./FieldError.jsx";
 
 const DIRECTIONS = [
@@ -18,7 +18,11 @@ const CURRENCIES = [
   { value: "USD", label: "$" },
 ];
 
-function IouForm({ onDone }) {
+// One form for both jobs, like the account form:
+// - iou = undefined → add a new IOU (POST)
+// - iou = {...}     → edit it (PATCH), starting from its current values
+function IouForm({ iou, onDone }) {
+  const isEdit = Boolean(iou);
   const queryClient = useQueryClient();
 
   const {
@@ -28,24 +32,34 @@ function IouForm({ onDone }) {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(iouFormSchema),
-    defaultValues: {
-      direction: "owedToMe",
-      person: "",
-      amount: "",
-      currency: "EUR",
-      dateLent: today(),
-      dueDate: addDays(today(), 14), // two weeks is a sensible default
-      note: "",
-    },
+    defaultValues: isEdit
+      ? {
+          direction: iou.direction,
+          person: iou.person,
+          amount: centsToInput(toCents(iou.amount)), // "688,95"
+          currency: iou.currency,
+          dateLent: iou.dateLent,
+          dueDate: iou.dueDate,
+          note: iou.note ?? "",
+        }
+      : {
+          direction: "owedToMe",
+          person: "",
+          amount: "",
+          currency: "EUR",
+          dateLent: today(),
+          dueDate: addDays(today(), 14), // two weeks is a sensible default
+          note: "",
+        },
   });
 
   const mutation = useMutation({
-    mutationFn: createIou,
+    mutationFn: (data) => (isEdit ? updateIou(iou.id, data) : createIou(data)),
     onSuccess: () => {
       // Only the IOUs changed: the tiles and the IOU list refresh by themselves
       queryClient.invalidateQueries({ queryKey: queryKeys.ious });
       reset();
-      onDone("IOU added");
+      onDone(isEdit ? "IOU updated" : "IOU added");
     },
   });
 
@@ -167,7 +181,7 @@ function IouForm({ onDone }) {
 
       <div className="form-actions">
         <button type="submit" className="button-primary" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : "Add IOU"}
+          {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Add IOU"}
         </button>
       </div>
     </form>
