@@ -3,40 +3,14 @@
 // Everything is calculated in CENTS (whole numbers), because decimals in
 // JavaScript are not exact: 0.1 + 0.2 === 0.30000000000000004.
 // 12.5 € becomes 1250 cents, we add and subtract whole numbers,
-// and only turn it back into euros when we show it.
+// and only turn it back into euros when we show or save it.
 
 export function toCents(amount) {
   return Math.round(amount * 100);
 }
 
-// Today's balance of every account, in its own currency, as { accountId: cents }.
-// The server only stores the opening balance and the movements:
-// income adds, expense subtracts, and a transfer takes money out of one account
-// and puts the received amount (it can be in another currency) into the other.
-export function computeBalances(accounts, movements) {
-  const balances = {};
-  for (const account of accounts) {
-    balances[account.id] = toCents(account.openingBalance);
-  }
-
-  for (const movement of movements) {
-    const amount = toCents(movement.amount);
-    if (movement.type === "income") {
-      add(balances, movement.accountId, amount);
-    } else if (movement.type === "expense") {
-      add(balances, movement.accountId, -amount);
-    } else if (movement.type === "transfer") {
-      add(balances, movement.accountId, -amount);
-      const received = toCents(movement.receivedAmount ?? movement.amount);
-      add(balances, movement.toAccountId, received);
-    }
-  }
-  return balances;
-}
-
-// Ignores movements that point to an account that no longer exists
-function add(balances, accountId, cents) {
-  if (accountId in balances) balances[accountId] += cents;
+export function fromCents(cents) {
+  return cents / 100;
 }
 
 // The currency we are NOT showing (only euros and dollars exist in the app)
@@ -97,20 +71,6 @@ export function formatShortDate(isoDate) {
     day: "numeric",
     month: "short",
   });
-}
-
-// ---------- Balance-first ----------
-// How much an account's movements have added or taken away, in cents.
-export function movementsEffect(accountId, movements) {
-  const startingFromZero = { id: accountId, openingBalance: 0 };
-  return computeBalances([startingFromZero], movements)[accountId];
-}
-
-// You type what's in the account NOW; we store the opening balance that,
-// plus its movements, gives exactly that number. No extra transaction needed.
-// Example: you type 1.200 and the movements add up to +207,65 → opening 992,35.
-export function openingBalanceFor(currentBalance, accountId, movements) {
-  return (toCents(currentBalance) - movementsEffect(accountId, movements)) / 100;
 }
 
 // ---------- Dates ----------

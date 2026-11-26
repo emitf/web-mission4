@@ -32,8 +32,7 @@ export function noNegativeCash(schema) {
 }
 
 // ---------- The account form ----------
-// In the form you type how much is in the account RIGHT NOW (balance-first).
-// The app turns that into the stored openingBalance (see utils/money.js).
+// You type how much is in the account RIGHT NOW (balance-first: no transactions).
 const accountFormFields = z.object({ ...accountBase, balance: acceptComma(balanceSchema) });
 
 export const accountFormSchema = noNegativeCash(accountFormFields);
@@ -66,14 +65,13 @@ export const balancesFormSchema = z.object({
 });
 
 // ---------- What the server sends back ----------
-// The stored number is the opening balance: today's balance = opening + movements.
-// (No "cash can't be negative" rule here: an opening balance can be negative
-// if, for example, you logged an income after the wallet was already full.)
-// updatedAt = the last day you confirmed this account's balance.
+// The same fields plus the id and the date you last confirmed the balance.
+// (The cash rule is for what you TYPE; the stored data is checked for its
+// shape: a real number, a real date… which is what catches corrupt data.)
 export const accountSchema = z.object({
   ...accountBase,
   id: idSchema,
-  openingBalance: balanceSchema,
+  balance: balanceSchema,
   updatedAt: isoDateSchema.optional(),
 });
 export const accountListSchema = z.array(accountSchema);

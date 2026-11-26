@@ -1,4 +1,4 @@
-// Small line icons for accounts and movements.
+// Small line icons for accounts and IOUs (arrow in = money coming to me).
 // aria-hidden: they are decoration, the text next to them says the same thing.
 const PATHS = {
   bank: (
@@ -32,12 +32,6 @@ const PATHS = {
     <>
       <path d="M12 19V5" />
       <path d="M6 11l6-6 6 6" />
-    </>
-  ),
-  transfer: (
-    <>
-      <path d="M4 8h14M14 4l4 4-4 4" />
-      <path d="M20 16H6M10 12l-4 4 4 4" />
     </>
   ),
 };

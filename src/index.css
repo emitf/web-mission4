@@ -830,3 +830,70 @@ h3 {
   color: var(--muted);
   width: 1ch;
 }
+
+/* ==========================================================
+   Stage 6 · in-app delete confirmation and net balance
+   ========================================================== */
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.confirm-question {
+  font-size: 0.8125rem;
+  color: var(--negative);
+  font-weight: 500;
+}
+
+.button-small-danger {
+  border-color: var(--negative);
+  color: var(--negative);
+}
+
+.form-actions-start {
+  margin-right: auto;
+}
+
+/* The danger button no longer pushes itself left (its wrapper does) */
+.form-actions-start .button-danger {
+  margin-right: 0;
+}
+
+.hero-net {
+  margin: 0.375rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.hero-note-inline {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* IOU rows: let the confirmation wrap under on narrow screens */
+.row {
+  flex-wrap: wrap;
+}
+
+/* While "Delete …?" is showing, give it its own line above Save */
+.form-actions {
+  flex-wrap: wrap;
+}
+
+.form-actions-start:has(.confirm) {
+  flex-basis: 100%;
+}
+
+.form-actions-start .confirm {
+  justify-content: flex-start;
+}
+
+.button-primary {
+  white-space: nowrap;
+}
+
+.form-actions-start .confirm-question {
+  flex-basis: 100%;
+}

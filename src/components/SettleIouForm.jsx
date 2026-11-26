@@ -1,24 +1,24 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { NO_ACCOUNT, settleFormSchema } from "../schemas/iou.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NO_ACCOUNT, makeSettleFormSchema } from "../schemas/iou.js";
 import { today } from "../schemas/common.js";
 import { updateIou } from "../services/ious.js";
-import { createMovement } from "../services/movements.js";
+import { changeBalance, getAccounts } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
-import { useAccountData } from "../hooks/useAccountData.js";
 import { formatMoney, toCents } from "../utils/money.js";
 import FieldError from "./FieldError.jsx";
 
 // "Mark as paid": closes the IOU and, if you say where the money went,
-// also moves it in or out of that account so the balance stays right.
+// also adds it to (or takes it from) that account's balance.
 function SettleIouForm({ iou, onDone }) {
   const queryClient = useQueryClient();
-  const { accounts } = useAccountData();
+  // Already in the cache from the dashboard: no new request
+  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
 
   const owedToMe = iou.direction === "owedToMe";
-  // Only accounts in the IOU's currency: 25 € can't land in a dollar wallet
-  // without knowing the exchange, and that's what a transfer is for.
+  // Only accounts in the IOU's currency: 25 € don't land in a dollar wallet
+  // as 25 $, and we don't know what exchange rate the person used.
   const options = accounts.filter((account) => account.currency === iou.currency);
 
   const {
@@ -26,35 +26,30 @@ function SettleIouForm({ iou, onDone }) {
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(settleFormSchema),
+    // Built with the accounts: paying from a wallet needs enough cash in it
+    resolver: zodResolver(makeSettleFormSchema(accounts, iou)),
     defaultValues: { accountId: options[0]?.id ?? NO_ACCOUNT },
   });
 
   const mutation = useMutation({
-    // Two saves in a row: first the money (a movement), then the IOU itself,
-    // which remembers that movement so "Undo" can remove it again.
+    // Two saves in a row: first the account's balance, then the IOU itself,
+    // which remembers the account so "Undo" can put the balance back.
     mutationFn: async ({ accountId }) => {
-      let movement = null;
-      if (accountId !== NO_ACCOUNT) {
-        movement = await createMovement({
-          type: owedToMe ? "income" : "expense",
-          amount: iou.amount,
-          accountId,
-          category: owedToMe ? "" : "other",
-          description: owedToMe ? `${iou.person} paid me back` : `Paid back ${iou.person}`,
-          date: today(),
-        });
+      const account = accounts.find((a) => a.id === accountId);
+      if (account) {
+        const cents = toCents(iou.amount);
+        await changeBalance(account, owedToMe ? cents : -cents);
       }
       return updateIou(iou.id, {
         settled: true,
         settledAt: today(),
-        settledMovementId: movement?.id ?? null,
+        settledAccountId: account?.id ?? null,
       });
     },
     onSuccess: () => {
-      // Both lists changed: the IOUs (now paid) and the movements (balances)
+      // Both changed: the IOUs (now paid) and the accounts (a balance moved)
       queryClient.invalidateQueries({ queryKey: queryKeys.ious });
-      queryClient.invalidateQueries({ queryKey: queryKeys.movements });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
       onDone(owedToMe ? `${iou.person} paid you back` : `Marked as paid to ${iou.person}`);
     },
   });

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteIou, getIous, updateIou } from "../services/ious.js";
-import { deleteMovement } from "../services/movements.js";
+import { changeBalance, getAccounts } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { today } from "../schemas/common.js";
 import { daysBetween, formatMoney, formatShortDate, toCents } from "../utils/money.js";
+import ConfirmDelete from "./ConfirmDelete.jsx";
 import Icon from "./Icon.jsx";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
@@ -81,10 +82,13 @@ function IouRow({ iou, onSettle }) {
   const owedToMe = iou.direction === "owedToMe";
   const cents = toCents(iou.amount);
 
-  // Both IOUs and movements can change (Undo removes the payment movement)
+  // Already in the cache from the dashboard: needed by "Undo"
+  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
+
+  // Undo can change an account's balance too, so both lists get refreshed
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.ious });
-    queryClient.invalidateQueries({ queryKey: queryKeys.movements });
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
   };
 
   const deleteMutation = useMutation({
@@ -92,26 +96,17 @@ function IouRow({ iou, onSettle }) {
     onSuccess: refresh,
   });
 
-  // Undo a "Mark as paid": remove the movement it created (if any) and reopen it
+  // Undo a "Mark as paid": take the money back out of (or put it back into)
+  // the account it went to, and reopen the IOU.
   const undoMutation = useMutation({
     mutationFn: async () => {
-      if (iou.settledMovementId) {
-        try {
-          await deleteMovement(iou.settledMovementId);
-        } catch {
-          // Already deleted by hand from the activity list: nothing to undo there
-        }
-      }
-      return updateIou(iou.id, { settled: false, settledAt: null, settledMovementId: null });
+      // If that account was deleted since, there's no balance to fix
+      const account = accounts.find((a) => a.id === iou.settledAccountId);
+      if (account) await changeBalance(account, owedToMe ? -cents : cents);
+      return updateIou(iou.id, { settled: false, settledAt: null, settledAccountId: null });
     },
     onSuccess: refresh,
   });
-
-  function handleDelete() {
-    if (window.confirm(`Delete the IOU with ${iou.person}? This can't be undone.`)) {
-      deleteMutation.mutate();
-    }
-  }
 
   // Due date text: "due 1 Dec", or in amber "overdue 8 days"
   const daysLate = daysBetween(iou.dueDate, today());
@@ -180,15 +175,15 @@ function IouRow({ iou, onSettle }) {
         </button>
       )}
 
-      <button
-        type="button"
-        className="icon-button row-delete"
-        aria-label={`Delete the IOU with ${iou.person}`}
-        onClick={handleDelete}
-        disabled={deleteMutation.isPending}
+      <ConfirmDelete
+        question={`Delete the IOU with ${iou.person}?`}
+        onConfirm={() => deleteMutation.mutate()}
+        isPending={deleteMutation.isPending}
+        label={`Delete the IOU with ${iou.person}`}
+        triggerClassName="icon-button row-delete"
       >
-        {deleteMutation.isPending ? "…" : "×"}
-      </button>
+        ×
+      </ConfirmDelete>
     </li>
   );
 }

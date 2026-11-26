@@ -5,7 +5,7 @@
       "name": "Main bank",
       "type": "bank",
       "currency": "EUR",
-      "openingBalance": 850,
+      "balance": 1057.65,
       "updatedAt": "2026-11-23"
     },
     {
@@ -13,7 +13,7 @@
       "name": "Savings",
       "type": "savings",
       "currency": "EUR",
-      "openingBalance": 2400,
+      "balance": 2400,
       "updatedAt": "2026-11-02"
     },
     {
@@ -21,7 +21,7 @@
       "name": "Wallet (euros)",
       "type": "cash",
       "currency": "EUR",
-      "openingBalance": 60,
+      "balance": 47.5,
       "updatedAt": "2026-11-21"
     },
     {
@@ -29,48 +29,8 @@
       "name": "Wallet (dollars)",
       "type": "cash",
       "currency": "USD",
-      "openingBalance": 120,
+      "balance": 174.2,
       "updatedAt": "2026-11-10"
-    }
-  ],
-  "movements": [
-    {
-      "id": "1",
-      "type": "income",
-      "amount": 300,
-      "accountId": "main-bank",
-      "category": "",
-      "description": "Part-time job",
-      "date": "2026-11-01"
-    },
-    {
-      "id": "2",
-      "type": "expense",
-      "amount": 42.35,
-      "accountId": "main-bank",
-      "category": "groceries",
-      "description": "Weekly shop",
-      "date": "2026-11-03"
-    },
-    {
-      "id": "3",
-      "type": "expense",
-      "amount": 12.5,
-      "accountId": "cash-eur",
-      "category": "eating-out",
-      "description": "Lunch with friends",
-      "date": "2026-11-05"
-    },
-    {
-      "id": "4",
-      "type": "transfer",
-      "amount": 50,
-      "accountId": "main-bank",
-      "toAccountId": "cash-usd",
-      "receivedAmount": 54.2,
-      "category": "",
-      "description": "Euros to dollars for the trip",
-      "date": "2026-11-10"
     }
   ],
   "ious": [

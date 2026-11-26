@@ -1,5 +1,5 @@
 import Icon from "./Icon.jsx";
-import { daysAgoText, daysBetween, formatMoney, toDisplayCents } from "../utils/money.js";
+import { daysAgoText, daysBetween, formatMoney, toCents, toDisplayCents } from "../utils/money.js";
 import { today } from "../schemas/common.js";
 
 const TYPE_LABELS = { bank: "Bank", savings: "Savings", cash: "Cash" };
@@ -7,7 +7,8 @@ const TYPE_LABELS = { bank: "Bank", savings: "Savings", cash: "Cash" };
 // After two weeks without checking, the number is probably out of date
 const STALE_AFTER_DAYS = 14;
 
-function AccountRow({ account, balanceCents, displayCurrency, rate, onEdit }) {
+function AccountRow({ account, displayCurrency, rate, onEdit }) {
+  const balanceCents = toCents(account.balance);
   // If the account is in the other currency, also show roughly what it's worth
   const converted =
     account.currency !== displayCurrency

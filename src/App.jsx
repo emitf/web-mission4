@@ -3,10 +3,8 @@ import AppHeader from "./components/AppHeader.jsx";
 import TotalBalance from "./components/TotalBalance.jsx";
 import SummaryTiles from "./components/SummaryTiles.jsx";
 import AccountList from "./components/AccountList.jsx";
-import RecentMovements from "./components/RecentMovements.jsx";
 import Dialog from "./components/Dialog.jsx";
 import AccountForm from "./components/AccountForm.jsx";
-import MovementForm from "./components/MovementForm.jsx";
 import BalancesForm from "./components/BalancesForm.jsx";
 import IouList from "./components/IouList.jsx";
 import IouForm from "./components/IouForm.jsx";
@@ -17,7 +15,6 @@ const PANEL_TITLES = {
   balances: "Update balances",
   account: "New account",
   editAccount: "Edit account",
-  movement: "New movement",
   iou: "New IOU",
   settle: "Mark as paid",
 };
@@ -68,7 +65,6 @@ function App() {
           onAdd={() => setPanel({ kind: "iou" })}
           onSettle={(iou) => setPanel({ kind: "settle", iou })}
         />
-        <RecentMovements onAdd={() => setPanel({ kind: "movement" })} />
       </main>
 
       <Dialog open={panel !== null} title={PANEL_TITLES[panel?.kind]} onClose={() => closePanel()}>
@@ -77,7 +73,6 @@ function App() {
         {panel?.kind === "editAccount" && (
           <AccountForm account={panel.account} onDone={closePanel} />
         )}
-        {panel?.kind === "movement" && <MovementForm onDone={closePanel} />}
         {panel?.kind === "iou" && <IouForm onDone={closePanel} />}
         {panel?.kind === "settle" && <SettleIouForm iou={panel.iou} onDone={closePanel} />}
       </Dialog>

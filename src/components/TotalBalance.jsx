@@ -1,5 +1,5 @@
-import { useBalances } from "../hooks/useBalances.js";
-import { formatShortDate, splitMoney, toDisplayCents, otherCurrency } from "../utils/money.js";
+import { useMoneySummary } from "../hooks/useMoneySummary.js";
+import { formatMoney, formatShortDate, otherCurrency, splitMoney } from "../utils/money.js";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
 const CURRENCY_OPTIONS = [
@@ -7,9 +7,11 @@ const CURRENCY_OPTIONS = [
   { value: "USD", label: "$", name: "dollars" },
 ];
 
+const SYMBOL = { EUR: "€", USD: "$" };
+
 function TotalBalance({ displayCurrency, onCurrencyChange }) {
-  const { accountsQuery, rateQuery, balances, isPending, isError, error, isFetching, refetch } =
-    useBalances(displayCurrency);
+  const summary = useMoneySummary(displayCurrency);
+  const { accountsQuery } = summary;
 
   return (
     <section className="hero" aria-labelledby="total-title">
@@ -18,7 +20,7 @@ function TotalBalance({ displayCurrency, onCurrencyChange }) {
           <h2 id="total-title" className="hero-label">
             Total balance
           </h2>
-          <UpdatingBadge show={isFetching && !isPending} />
+          <UpdatingBadge show={accountsQuery.isFetching && !accountsQuery.isPending} />
         </div>
 
         {/* aria-pressed tells screen readers which currency is selected */}
@@ -37,31 +39,29 @@ function TotalBalance({ displayCurrency, onCurrencyChange }) {
         </div>
       </div>
 
-      {isPending && <LoadingRows label="Loading your total balance…" rows={1} />}
-      {isError && <QueryError error={error} onRetry={refetch} />}
-      {balances && (
-        <HeroAmount
-          accounts={accountsQuery.data}
-          balances={balances}
-          displayCurrency={displayCurrency}
-          rateQuery={rateQuery}
-        />
+      {accountsQuery.isPending && <LoadingRows label="Loading your total balance…" rows={1} />}
+      {accountsQuery.isError && (
+        <QueryError error={accountsQuery.error} onRetry={() => accountsQuery.refetch()} />
+      )}
+      {accountsQuery.isSuccess && (
+        <HeroAmount summary={summary} displayCurrency={displayCurrency} />
       )}
     </section>
   );
 }
 
-function HeroAmount({ accounts, balances, displayCurrency, rateQuery }) {
+function HeroAmount({ summary, displayCurrency }) {
+  const { accounts, rateQuery, total, owedToMe, iOwe, net } = summary;
   const foreign = otherCurrency(displayCurrency);
-  const needsRate = accounts.some((account) => account.currency === foreign);
+  const accountsNeedRate = accounts.some((account) => account.currency === foreign);
 
   // Waiting for the rate: we can't add euros and dollars yet
-  if (needsRate && rateQuery.isPending) {
+  if (accountsNeedRate && rateQuery.isPending) {
     return <LoadingRows label="Getting today's exchange rate…" rows={1} />;
   }
 
   // Rate service down: say so, and still show what we can (the accounts list below)
-  if (needsRate && rateQuery.isError) {
+  if (total === null && rateQuery.isError) {
     return (
       <div className="query-error" role="alert">
         <p>
@@ -75,12 +75,7 @@ function HeroAmount({ accounts, balances, displayCurrency, rateQuery }) {
     );
   }
 
-  const rate = rateQuery.data?.rate;
-  const total = accounts.reduce(
-    (sum, account) =>
-      sum + toDisplayCents(balances[account.id], account.currency, displayCurrency, rate),
-    0,
-  );
+  if (total === null) return null;
   const { whole, decimals, symbol } = splitMoney(total, displayCurrency);
 
   return (
@@ -90,12 +85,24 @@ function HeroAmount({ accounts, balances, displayCurrency, rateQuery }) {
         <span className="hero-cents">{decimals}</span>
         {symbol}
       </p>
-      {needsRate && rateQuery.data && (
+
+      {/* What I'd have if every IOU were settled today. Only shown once the
+          IOUs are known (if they fail to load, the total still shows). */}
+      {net !== null && (owedToMe !== 0 || iOwe !== 0) && (
+        <p className="hero-net">
+          Net with IOUs: <strong className="amount">{formatMoney(net, displayCurrency)}</strong>{" "}
+          <span className="hero-note-inline amount">
+            (<span className="positive">+{formatMoney(owedToMe, displayCurrency)}</span> owed to you
+            − <span className="negative">{formatMoney(iOwe, displayCurrency)}</span> you owe)
+          </span>
+        </p>
+      )}
+
+      {rateQuery.data && (
         <p className="hero-note">
-          1 {foreign === "USD" ? "$" : "€"} ={" "}
-          {rate.toLocaleString("es-ES", { maximumFractionDigits: 4 })}{" "}
-          {displayCurrency === "USD" ? "$" : "€"} · ECB rate from{" "}
-          {formatShortDate(rateQuery.data.date)}
+          1 {SYMBOL[foreign]} ={" "}
+          {rateQuery.data.rate.toLocaleString("es-ES", { maximumFractionDigits: 4 })}{" "}
+          {SYMBOL[displayCurrency]} · ECB rate from {formatShortDate(rateQuery.data.date)}
         </p>
       )}
     </>

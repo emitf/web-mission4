@@ -1,5 +1,6 @@
 import { request, validate } from "./http.js";
 import { accountListSchema, accountSchema } from "../schemas/account.js";
+import { fromCents, toCents } from "../utils/money.js";
 
 export async function getAccounts({ signal } = {}) {
   const data = await request("/accounts", { signal });
@@ -18,6 +19,15 @@ export async function updateAccount(id, changes) {
     body: changes,
   });
   return validate(accountSchema, data, "the updated account");
+}
+
+// Adds (or subtracts, if negative) some cents to an account's balance.
+// Used when an IOU is paid into / out of an account, and when that is undone.
+// Done in cents so 0.1 + 0.2 problems can't creep into a saved balance.
+export function changeBalance(account, cents) {
+  return updateAccount(account.id, {
+    balance: fromCents(toCents(account.balance) + cents),
+  });
 }
 
 export async function deleteAccount(id) {

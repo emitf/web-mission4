@@ -1,12 +1,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { makeAccountFormSchema } from "../schemas/account.js";
 import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
-import { createAccount, deleteAccount, updateAccount } from "../services/accounts.js";
+import { createAccount, deleteAccount, getAccounts, updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
-import { useAccountData } from "../hooks/useAccountData.js";
-import { openingBalanceFor } from "../utils/money.js";
+import { toCents } from "../utils/money.js";
+import ConfirmDelete from "./ConfirmDelete.jsx";
 import FieldError from "./FieldError.jsx";
 
 const TYPES = [
@@ -26,19 +26,12 @@ const CURRENCIES = [
 function AccountForm({ account, onDone }) {
   const isEdit = Boolean(account);
   const queryClient = useQueryClient();
-  const { accounts, movements, balances } = useAccountData();
+
+  // Already in the cache from the dashboard: no new request
+  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
 
   // Names used by OTHER accounts (so an edit can keep its own name)
   const takenNames = accounts.filter((a) => a.id !== account?.id).map((a) => a.name);
-
-  // An account with movements can't change currency or be deleted:
-  // its past amounts would suddenly be in the wrong currency / point nowhere.
-  const hasMovements =
-    isEdit && movements.some((m) => m.accountId === account.id || m.toAccountId === account.id);
-
-  // What's in the account today (the number on the dashboard)
-  // shown Spanish-style ("1607,65"); the schema accepts the comma
-  const currentBalance = isEdit ? centsToInput(balances[account.id]) : "";
 
   const {
     register,
@@ -51,22 +44,16 @@ function AccountForm({ account, onDone }) {
       name: account?.name ?? "",
       type: account?.type ?? "bank",
       currency: account?.currency ?? "EUR",
-      balance: currentBalance,
+      // shown Spanish-style ("1607,65"); the schema accepts the comma
+      balance: isEdit ? centsToInput(toCents(account.balance)) : "",
     },
   });
 
   const saveMutation = useMutation({
-    mutationFn: ({ balance, ...fields }) => {
-      if (!isEdit) {
-        // A new account has no movements: what's in it now IS its opening balance
-        return createAccount({ ...fields, openingBalance: balance, updatedAt: today() });
-      }
-      const changes = { ...fields };
-      // Only touch the balance (and its "updated" date) if you actually changed it
-      if (dirtyFields.balance) {
-        changes.openingBalance = openingBalanceFor(balance, account.id, movements);
-        changes.updatedAt = today();
-      }
+    mutationFn: (data) => {
+      if (!isEdit) return createAccount({ ...data, updatedAt: today() });
+      // "Updated today" only if you actually changed the balance
+      const changes = dirtyFields.balance ? { ...data, updatedAt: today() } : data;
       return updateAccount(account.id, changes);
     },
     onSuccess: () => {
@@ -86,14 +73,6 @@ function AccountForm({ account, onDone }) {
     },
   });
 
-  function handleDelete() {
-    if (window.confirm(`Delete "${account.name}"? This can't be undone.`)) {
-      deleteMutation.mutate();
-    }
-  }
-
-  const busy = saveMutation.isPending || deleteMutation.isPending;
-
   const balanceField = (
     <div className="field">
       <label htmlFor="account-balance">Current balance</label>
@@ -112,7 +91,7 @@ function AccountForm({ account, onDone }) {
         {...register("balance", { setValueAs: toDotDecimal })}
       />
       <p id="account-balance-hint" className="hint">
-        What your bank app or wallet shows right now. No need to log a transaction.
+        What your bank app or wallet shows right now.
       </p>
       <FieldError id="account-balance-error" error={errors.balance} />
     </div>
@@ -157,38 +136,26 @@ function AccountForm({ account, onDone }) {
         <FieldError id="account-type-error" error={errors.type} />
       </fieldset>
 
-      {hasMovements ? (
-        // Locked: still sent with the form (hidden input), but not editable
-        <div className="field">
-          <p className="field-label">Currency</p>
-          <p className="locked">
-            {CURRENCIES.find((c) => c.value === account.currency).label}
-            <span className="hint"> · Locked because this account already has activity</span>
-          </p>
-          <input type="hidden" {...register("currency")} />
+      <fieldset
+        className="field"
+        aria-describedby={errors.currency ? "account-currency-error" : undefined}
+      >
+        <legend>Currency</legend>
+        <div className="choice-group">
+          {CURRENCIES.map((currency) => (
+            <label key={currency.value} className="choice">
+              <input
+                type="radio"
+                value={currency.value}
+                aria-invalid={errors.currency ? "true" : "false"}
+                {...register("currency")}
+              />
+              <span>{currency.label}</span>
+            </label>
+          ))}
         </div>
-      ) : (
-        <fieldset
-          className="field"
-          aria-describedby={errors.currency ? "account-currency-error" : undefined}
-        >
-          <legend>Currency</legend>
-          <div className="choice-group">
-            {CURRENCIES.map((currency) => (
-              <label key={currency.value} className="choice">
-                <input
-                  type="radio"
-                  value={currency.value}
-                  aria-invalid={errors.currency ? "true" : "false"}
-                  {...register("currency")}
-                />
-                <span>{currency.label}</span>
-              </label>
-            ))}
-          </div>
-          <FieldError id="account-currency-error" error={errors.currency} />
-        </fieldset>
-      )}
+        <FieldError id="account-currency-error" error={errors.currency} />
+      </fieldset>
 
       {!isEdit && balanceField}
 
@@ -206,27 +173,27 @@ function AccountForm({ account, onDone }) {
 
       <div className="form-actions">
         {isEdit && (
-          <button
-            type="button"
-            className="button-danger"
-            onClick={handleDelete}
-            disabled={busy || hasMovements}
-            aria-describedby={hasMovements ? "delete-hint" : undefined}
-          >
-            {deleteMutation.isPending ? "Deleting…" : "Delete"}
-          </button>
+          <span className="form-actions-start">
+            <ConfirmDelete
+              question={`Delete "${account.name}"? This can't be undone.`}
+              onConfirm={() => deleteMutation.mutate()}
+              isPending={deleteMutation.isPending}
+              triggerClassName="button-danger"
+            >
+              Delete
+            </ConfirmDelete>
+          </span>
         )}
         {/* Clickable until submit (so it can explain what's missing);
             disabled only WHILE sending, to avoid sending twice */}
-        <button type="submit" className="button-primary" disabled={busy}>
+        <button
+          type="submit"
+          className="button-primary"
+          disabled={saveMutation.isPending || deleteMutation.isPending}
+        >
           {saveMutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Add account"}
         </button>
       </div>
-      {isEdit && hasMovements && (
-        <p id="delete-hint" className="hint">
-          To delete this account, delete its activity first.
-        </p>
-      )}
     </form>
   );
 }

@@ -41,14 +41,14 @@ function iouRules(schema) {
 export const iouFormSchema = iouRules(iouFields);
 
 // What the server must send back: the same fields plus an id and whether it's paid.
-// When it's paid we also remember the day, and the movement it created (if the
-// money went into one of my accounts), so "Undo" can remove that movement too.
+// When it's paid we also remember the day and the account the money went
+// into / came out of, so "Undo" can put that account's balance back.
 export const iouSchema = iouRules(
   iouFields.extend({
     id: idSchema,
     settled: z.boolean(),
     settledAt: isoDateSchema.nullish(),
-    settledMovementId: z.string().nullish(),
+    settledAccountId: z.string().nullish(),
   }),
 );
 export const iouListSchema = z.array(iouSchema);
@@ -56,6 +56,20 @@ export const iouListSchema = z.array(iouSchema);
 // "Mark as paid": which account the money went into / came out of.
 // NO_ACCOUNT = just close the IOU without changing any balance.
 export const NO_ACCOUNT = "none";
-export const settleFormSchema = z.object({
-  accountId: z.string().min(1, "Choose an account, or say not to change any balance"),
-});
+
+// Built with my accounts and the IOU, because the rule needs both:
+// if I pay someone back in cash, the wallet must have enough in it.
+export function makeSettleFormSchema(accounts, iou) {
+  return z
+    .object({
+      accountId: z.string().min(1, "Choose an account, or say not to change any balance"),
+    })
+    .refine(
+      ({ accountId }) => {
+        const account = accounts.find((a) => a.id === accountId);
+        const payingFromCash = iou.direction === "iOwe" && account?.type === "cash";
+        return !payingFromCash || account.balance >= iou.amount;
+      },
+      { error: "There isn't enough cash in that wallet", path: ["accountId"] },
+    );
+}

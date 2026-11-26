@@ -1,12 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { balancesFormSchema } from "../schemas/account.js";
 import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
-import { updateAccount } from "../services/accounts.js";
+import { getAccounts, updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
-import { useAccountData } from "../hooks/useAccountData.js";
-import { openingBalanceFor } from "../utils/money.js";
+import { toCents } from "../utils/money.js";
 import Icon from "./Icon.jsx";
 import FieldError from "./FieldError.jsx";
 
@@ -17,7 +16,8 @@ const SYMBOL = { EUR: "€", USD: "$" };
 // your bank apps and wallet, save.
 function BalancesForm({ onDone }) {
   const queryClient = useQueryClient();
-  const { accounts, movements, balances } = useAccountData();
+  // Already in the cache from the dashboard: no new request
+  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
 
   const {
     register,
@@ -31,7 +31,7 @@ function BalancesForm({ onDone }) {
       accounts: accounts.map((account) => ({
         id: account.id,
         type: account.type,
-        balance: centsToInput(balances[account.id]), // "1607,65"
+        balance: centsToInput(toCents(account.balance)), // "1607,65"
       })),
     },
   });
@@ -41,12 +41,7 @@ function BalancesForm({ onDone }) {
     // gets today's date: you checked it, so it's up to date.
     mutationFn: (rows) =>
       Promise.all(
-        rows.map((row) =>
-          updateAccount(row.id, {
-            openingBalance: openingBalanceFor(row.balance, row.id, movements),
-            updatedAt: today(),
-          }),
-        ),
+        rows.map((row) => updateAccount(row.id, { balance: row.balance, updatedAt: today() })),
       ),
     // onSettled (not onSuccess): if one PATCH fails, the others may already be
     // saved, so we refresh the accounts either way.
