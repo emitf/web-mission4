@@ -2,7 +2,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CATEGORY_LABELS, makeMovementFormSchema } from "../schemas/movement.js";
-import { today } from "../schemas/common.js";
+import { toDotDecimal, today } from "../schemas/common.js";
 import { getAccounts } from "../services/accounts.js";
 import { createMovement } from "../services/movements.js";
 import { queryKeys } from "../queryKeys.js";
@@ -15,9 +15,6 @@ const TYPES = [
 ];
 
 const SYMBOL = { EUR: "€", USD: "$" };
-
-// Spanish keyboards type "12,50": we turn the comma into a dot before Zod sees it
-const commaToDot = (value) => (typeof value === "string" ? value.replace(",", ".") : value);
 
 // Only the fields that make sense for this type are saved
 function toMovement(data, sameCurrency) {
@@ -170,7 +167,7 @@ function MovementForm({ onDone }) {
           placeholder="0,00"
           aria-invalid={errors.amount ? "true" : "false"}
           aria-describedby={errors.amount ? "movement-amount-error" : undefined}
-          {...register("amount", { setValueAs: commaToDot })}
+          {...register("amount", { setValueAs: toDotDecimal })}
         />
         <FieldError id="movement-amount-error" error={errors.amount} />
       </div>
@@ -190,7 +187,7 @@ function MovementForm({ onDone }) {
                 ? "movement-received-hint movement-received-error"
                 : "movement-received-hint"
             }
-            {...register("receivedAmount", { setValueAs: commaToDot })}
+            {...register("receivedAmount", { setValueAs: toDotDecimal })}
           />
           <p id="movement-received-hint" className="hint">
             What actually arrived after the exchange, as your bank or the exchange office shows it.

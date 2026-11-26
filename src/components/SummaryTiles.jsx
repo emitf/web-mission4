@@ -28,7 +28,9 @@ function SummaryTiles({ displayCurrency }) {
     return <LoadingRows label="Loading what you owe and are owed…" rows={1} />;
   }
   if (iousQuery.isError) {
-    return <QueryError error={iousQuery.error} onRetry={() => iousQuery.refetch()} what="your IOUs" />;
+    return (
+      <QueryError error={iousQuery.error} onRetry={() => iousQuery.refetch()} what="your IOUs" />
+    );
   }
 
   const owedToMe = open.filter((iou) => iou.direction === "owedToMe");

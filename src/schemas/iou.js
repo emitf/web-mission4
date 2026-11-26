@@ -41,5 +41,21 @@ function iouRules(schema) {
 export const iouFormSchema = iouRules(iouFields);
 
 // What the server must send back: the same fields plus an id and whether it's paid.
-export const iouSchema = iouRules(iouFields.extend({ id: idSchema, settled: z.boolean() }));
+// When it's paid we also remember the day, and the movement it created (if the
+// money went into one of my accounts), so "Undo" can remove that movement too.
+export const iouSchema = iouRules(
+  iouFields.extend({
+    id: idSchema,
+    settled: z.boolean(),
+    settledAt: isoDateSchema.nullish(),
+    settledMovementId: z.string().nullish(),
+  }),
+);
 export const iouListSchema = z.array(iouSchema);
+
+// "Mark as paid": which account the money went into / came out of.
+// NO_ACCOUNT = just close the IOU without changing any balance.
+export const NO_ACCOUNT = "none";
+export const settleFormSchema = z.object({
+  accountId: z.string().min(1, "Choose an account, or say not to change any balance"),
+});

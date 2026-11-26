@@ -5,28 +5,32 @@
       "name": "Main bank",
       "type": "bank",
       "currency": "EUR",
-      "openingBalance": 850
+      "openingBalance": 850,
+      "updatedAt": "2026-11-23"
     },
     {
       "id": "savings",
       "name": "Savings",
       "type": "savings",
       "currency": "EUR",
-      "openingBalance": 2400
+      "openingBalance": 2400,
+      "updatedAt": "2026-11-02"
     },
     {
       "id": "cash-eur",
       "name": "Wallet (euros)",
       "type": "cash",
       "currency": "EUR",
-      "openingBalance": 60
+      "openingBalance": 60,
+      "updatedAt": "2026-11-21"
     },
     {
       "id": "cash-usd",
       "name": "Wallet (dollars)",
       "type": "cash",
       "currency": "USD",
-      "openingBalance": 120
+      "openingBalance": 120,
+      "updatedAt": "2026-11-10"
     }
   ],
   "movements": [

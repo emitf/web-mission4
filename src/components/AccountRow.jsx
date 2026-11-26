@@ -1,7 +1,11 @@
 import Icon from "./Icon.jsx";
-import { formatMoney, toDisplayCents } from "../utils/money.js";
+import { daysAgoText, daysBetween, formatMoney, toDisplayCents } from "../utils/money.js";
+import { today } from "../schemas/common.js";
 
 const TYPE_LABELS = { bank: "Bank", savings: "Savings", cash: "Cash" };
+
+// After two weeks without checking, the number is probably out of date
+const STALE_AFTER_DAYS = 14;
 
 function AccountRow({ account, balanceCents, displayCurrency, rate, onEdit }) {
   // If the account is in the other currency, also show roughly what it's worth
@@ -9,6 +13,10 @@ function AccountRow({ account, balanceCents, displayCurrency, rate, onEdit }) {
     account.currency !== displayCurrency
       ? toDisplayCents(balanceCents, account.currency, displayCurrency, rate)
       : null;
+
+  // When did I last confirm this balance?
+  const daysSinceUpdate = account.updatedAt ? daysBetween(account.updatedAt, today()) : null;
+  const isStale = daysSinceUpdate !== null && daysSinceUpdate >= STALE_AFTER_DAYS;
 
   return (
     <li>
@@ -24,7 +32,13 @@ function AccountRow({ account, balanceCents, displayCurrency, rate, onEdit }) {
             {account.name}
           </span>
           <span className="row-sub">
-            {TYPE_LABELS[account.type]} · {account.currency}
+            {TYPE_LABELS[account.type]}
+            {daysSinceUpdate !== null && (
+              <span className={isStale ? "stale" : ""}>
+                {" "}
+                · updated {daysAgoText(daysSinceUpdate)}
+              </span>
+            )}
           </span>
         </span>
 

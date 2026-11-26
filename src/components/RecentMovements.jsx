@@ -9,7 +9,9 @@ import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
 const HOW_MANY = 6;
 
-function RecentMovements() {
+// Optional activity: transfers (like € → $) and the payments of IOUs land here.
+// The app is balance-first, so you don't need to log every expense.
+function RecentMovements({ onAdd }) {
   // Same keys as the dashboard → read from the cache, no extra requests
   const movementsQuery = useQuery({ queryKey: queryKeys.movements, queryFn: getMovements });
   const accountsQuery = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
@@ -32,8 +34,13 @@ function RecentMovements() {
   return (
     <section className="section" aria-labelledby="movements-title">
       <div className="title-row">
-        <h2 id="movements-title">Recent movements</h2>
+        <h2 id="movements-title">
+          Activity <span className="optional">(optional)</span>
+        </h2>
         <UpdatingBadge show={movementsQuery.isFetching && !isPending} />
+        <button type="button" className="link-button" onClick={onAdd}>
+          + Add movement
+        </button>
       </div>
 
       {isPending && <LoadingRows label="Loading your movements…" rows={3} />}
@@ -41,7 +48,11 @@ function RecentMovements() {
         <QueryError error={failed.error} onRetry={() => failed.refetch()} what="your movements" />
       )}
 
-      {!isPending && !failed && recent.length === 0 && <p className="empty">No movements yet.</p>}
+      {!isPending && !failed && recent.length === 0 && (
+        <p className="empty">
+          No activity yet. Use it for things like changing euros into dollars.
+        </p>
+      )}
 
       {!isPending && !failed && recent.length > 0 && (
         <ul className="rows">

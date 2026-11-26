@@ -7,13 +7,27 @@ import RecentMovements from "./components/RecentMovements.jsx";
 import Dialog from "./components/Dialog.jsx";
 import AccountForm from "./components/AccountForm.jsx";
 import MovementForm from "./components/MovementForm.jsx";
+import BalancesForm from "./components/BalancesForm.jsx";
+import IouList from "./components/IouList.jsx";
+import IouForm from "./components/IouForm.jsx";
+import SettleIouForm from "./components/SettleIouForm.jsx";
+
+// The title of each panel
+const PANEL_TITLES = {
+  balances: "Update balances",
+  account: "New account",
+  editAccount: "Edit account",
+  movement: "New movement",
+  iou: "New IOU",
+  settle: "Mark as paid",
+};
 
 function App() {
   // The currency the totals are shown in. It's a UI choice, not server data,
   // so it lives in normal React state.
   const [displayCurrency, setDisplayCurrency] = useState("EUR");
 
-  // Which panel is open: null, { kind: "account", account? } or { kind: "movement" }
+  // Which panel is open: null or { kind, account?, iou? } (see PANEL_TITLES)
   const [panel, setPanel] = useState(null);
 
   // Short confirmation after a panel closes ("Account added")
@@ -29,40 +43,43 @@ function App() {
     }
   }
 
-  const panelTitle =
-    panel?.kind === "movement" ? "New movement" : panel?.account ? "Edit account" : "New account";
-
   return (
     <>
       <AppHeader />
       <main className="page">
         <div className="overview">
-          <TotalBalance
-            displayCurrency={displayCurrency}
-            onCurrencyChange={setDisplayCurrency}
-          />
+          <TotalBalance displayCurrency={displayCurrency} onCurrencyChange={setDisplayCurrency} />
+          {/* The main action of a balance-first app: copy today's numbers in */}
           <button
             type="button"
             className="button-primary button-add"
-            onClick={() => setPanel({ kind: "movement" })}
+            onClick={() => setPanel({ kind: "balances" })}
           >
-            + Add movement
+            Update balances
           </button>
           <SummaryTiles displayCurrency={displayCurrency} />
         </div>
         <AccountList
           displayCurrency={displayCurrency}
           onAdd={() => setPanel({ kind: "account" })}
-          onEdit={(account) => setPanel({ kind: "account", account })}
+          onEdit={(account) => setPanel({ kind: "editAccount", account })}
         />
-        <RecentMovements />
+        <IouList
+          onAdd={() => setPanel({ kind: "iou" })}
+          onSettle={(iou) => setPanel({ kind: "settle", iou })}
+        />
+        <RecentMovements onAdd={() => setPanel({ kind: "movement" })} />
       </main>
 
-      <Dialog open={panel !== null} title={panelTitle} onClose={() => closePanel()}>
-        {panel?.kind === "account" && (
+      <Dialog open={panel !== null} title={PANEL_TITLES[panel?.kind]} onClose={() => closePanel()}>
+        {panel?.kind === "balances" && <BalancesForm onDone={closePanel} />}
+        {panel?.kind === "account" && <AccountForm onDone={closePanel} />}
+        {panel?.kind === "editAccount" && (
           <AccountForm account={panel.account} onDone={closePanel} />
         )}
         {panel?.kind === "movement" && <MovementForm onDone={closePanel} />}
+        {panel?.kind === "iou" && <IouForm onDone={closePanel} />}
+        {panel?.kind === "settle" && <SettleIouForm iou={panel.iou} onDone={closePanel} />}
       </Dialog>
 
       {/* Always in the page, so screen readers notice when its text changes */}

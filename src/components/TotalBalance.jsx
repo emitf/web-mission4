@@ -65,8 +65,8 @@ function HeroAmount({ accounts, balances, displayCurrency, rateQuery }) {
     return (
       <div className="query-error" role="alert">
         <p>
-          Can&apos;t convert {foreign === "USD" ? "dollars" : "euros"} right now, so the
-          total isn&apos;t available. Your accounts below are still up to date.
+          Can&apos;t convert {foreign === "USD" ? "dollars" : "euros"} right now, so the total
+          isn&apos;t available. Your accounts below are still up to date.
         </p>
         <button type="button" className="button-secondary" onClick={() => rateQuery.refetch()}>
           Try again
@@ -92,8 +92,10 @@ function HeroAmount({ accounts, balances, displayCurrency, rateQuery }) {
       </p>
       {needsRate && rateQuery.data && (
         <p className="hero-note">
-          1 {foreign === "USD" ? "$" : "€"} = {rate.toLocaleString("es-ES", { maximumFractionDigits: 4 })}{" "}
-          {displayCurrency === "USD" ? "$" : "€"} · ECB rate from {formatShortDate(rateQuery.data.date)}
+          1 {foreign === "USD" ? "$" : "€"} ={" "}
+          {rate.toLocaleString("es-ES", { maximumFractionDigits: 4 })}{" "}
+          {displayCurrency === "USD" ? "$" : "€"} · ECB rate from{" "}
+          {formatShortDate(rateQuery.data.date)}
         </p>
       )}
     </>

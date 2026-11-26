@@ -1,10 +1,17 @@
 import { z } from "zod";
-import { balanceSchema, currencySchema, idSchema, onlyNeeds } from "./common.js";
+import {
+  acceptComma,
+  balanceSchema,
+  currencySchema,
+  idSchema,
+  isoDateSchema,
+  onlyNeeds,
+} from "./common.js";
 
 export const ACCOUNT_TYPES = ["bank", "savings", "cash"];
 
-// The plain fields of an account, shared by the form and the API response.
-const accountFields = z.object({
+// The fields every account has, shared by the forms and the API response.
+const accountBase = {
   name: z
     .string()
     .trim()
@@ -12,21 +19,24 @@ const accountFields = z.object({
     .max(30, "Keep the name under 30 characters"),
   type: z.enum(ACCOUNT_TYPES, { error: "Choose bank, savings or cash" }),
   currency: currencySchema,
-  openingBalance: balanceSchema,
-});
+};
 
-// Rules that compare fields with each other.
-// A bank account can be overdrawn, but a wallet can't hold less than nothing.
-function accountRules(schema) {
-  return schema.refine((account) => !(account.type === "cash" && account.openingBalance < 0), {
-    error: "A cash account can't start with a negative balance",
-    path: ["openingBalance"],
-    ...onlyNeeds("type", "openingBalance"),
+// A wallet can't hold less than nothing (a bank account can be overdrawn).
+// Used by every form where you type a current balance.
+export function noNegativeCash(schema) {
+  return schema.refine((account) => !(account.type === "cash" && account.balance < 0), {
+    error: "Cash can't be negative",
+    path: ["balance"],
+    ...onlyNeeds("type", "balance"),
   });
 }
 
-// What the "new account" form checks.
-export const accountFormSchema = accountRules(accountFields);
+// ---------- The account form ----------
+// In the form you type how much is in the account RIGHT NOW (balance-first).
+// The app turns that into the stored openingBalance (see utils/money.js).
+const accountFormFields = z.object({ ...accountBase, balance: acceptComma(balanceSchema) });
+
+export const accountFormSchema = noNegativeCash(accountFormFields);
 
 // The form also checks that the name isn't already used by another account.
 // `takenNames` comes from the accounts already loaded (when editing, it leaves
@@ -41,6 +51,29 @@ export function makeAccountFormSchema(takenNames) {
   });
 }
 
-// What the server must send back: the same fields plus an id.
-export const accountSchema = accountRules(accountFields.extend({ id: idSchema }));
+// ---------- The "Update balances" panel ----------
+// One row per account: its id and type (to apply the cash rule) and the new balance.
+export const balancesFormSchema = z.object({
+  accounts: z.array(
+    noNegativeCash(
+      z.object({
+        id: idSchema,
+        type: z.enum(ACCOUNT_TYPES),
+        balance: acceptComma(balanceSchema),
+      }),
+    ),
+  ),
+});
+
+// ---------- What the server sends back ----------
+// The stored number is the opening balance: today's balance = opening + movements.
+// (No "cash can't be negative" rule here: an opening balance can be negative
+// if, for example, you logged an income after the wallet was already full.)
+// updatedAt = the last day you confirmed this account's balance.
+export const accountSchema = z.object({
+  ...accountBase,
+  id: idSchema,
+  openingBalance: balanceSchema,
+  updatedAt: isoDateSchema.optional(),
+});
 export const accountListSchema = z.array(accountSchema);

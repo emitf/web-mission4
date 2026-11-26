@@ -737,3 +737,96 @@ h3 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================
+   Stage 5 · balance-first and IOUs
+   ========================================================== */
+.stale {
+  color: var(--warning);
+}
+
+.button-small {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  flex: none;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button-small:hover {
+  background: var(--tile);
+}
+
+.button-small:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.toggle-paid {
+  margin: 0.5rem 0 0;
+}
+
+.rows-paid .row-title,
+.rows-paid .row-amount {
+  color: var(--muted);
+}
+
+.settle-summary {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* "Update balances" rows: icon · name · amount box */
+.balance-rows {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.balance-row {
+  display: grid;
+  grid-template-columns: auto 1fr 9rem;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.375rem 0;
+}
+
+.balance-row .field-error {
+  grid-column: 2 / -1;
+  text-align: right;
+}
+
+.balance-label {
+  font-weight: 500;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.money-input input {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  text-align: right;
+}
+
+.money-input input[aria-invalid="true"] {
+  border-color: var(--negative);
+}
+
+.money-input span {
+  color: var(--muted);
+  width: 1ch;
+}

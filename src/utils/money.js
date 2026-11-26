@@ -98,3 +98,42 @@ export function formatShortDate(isoDate) {
     month: "short",
   });
 }
+
+// ---------- Balance-first ----------
+// How much an account's movements have added or taken away, in cents.
+export function movementsEffect(accountId, movements) {
+  const startingFromZero = { id: accountId, openingBalance: 0 };
+  return computeBalances([startingFromZero], movements)[accountId];
+}
+
+// You type what's in the account NOW; we store the opening balance that,
+// plus its movements, gives exactly that number. No extra transaction needed.
+// Example: you type 1.200 and the movements add up to +207,65 → opening 992,35.
+export function openingBalanceFor(currentBalance, accountId, movements) {
+  return (toCents(currentBalance) - movementsEffect(accountId, movements)) / 100;
+}
+
+// ---------- Dates ----------
+function localDate(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+// Whole days from one "YYYY-MM-DD" to another (positive if `to` is later)
+export function daysBetween(from, to) {
+  return Math.round((localDate(to) - localDate(from)) / 86_400_000);
+}
+
+// "today", "yesterday", "12 days ago"
+export function daysAgoText(days) {
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+
+// "2026-12-08", two weeks after a date: the default due date of an IOU
+export function addDays(isoDate, days) {
+  const date = localDate(isoDate);
+  date.setDate(date.getDate() + days);
+  return date.toLocaleDateString("en-CA");
+}

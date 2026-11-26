@@ -1,10 +1,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { makeAccountFormSchema } from "../schemas/account.js";
-import { createAccount, deleteAccount, getAccounts, updateAccount } from "../services/accounts.js";
-import { getMovements } from "../services/movements.js";
+import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
+import { createAccount, deleteAccount, updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
+import { useAccountData } from "../hooks/useAccountData.js";
+import { openingBalanceFor } from "../utils/money.js";
 import FieldError from "./FieldError.jsx";
 
 const TYPES = [
@@ -18,22 +20,13 @@ const CURRENCIES = [
   { value: "USD", label: "Dollars ($)" },
 ];
 
-// Spanish keyboards type "12,50": we turn the comma into a dot before Zod sees it
-const commaToDot = (value) => (typeof value === "string" ? value.replace(",", ".") : value);
-
 // One form for both jobs:
 // - account = undefined → create a new account (POST)
 // - account = {...}     → edit that account (PATCH), starting from its values
 function AccountForm({ account, onDone }) {
   const isEdit = Boolean(account);
   const queryClient = useQueryClient();
-
-  // Already in the cache from the dashboard: no new request
-  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
-  const { data: movements = [] } = useQuery({
-    queryKey: queryKeys.movements,
-    queryFn: getMovements,
-  });
+  const { accounts, movements, balances } = useAccountData();
 
   // Names used by OTHER accounts (so an edit can keep its own name)
   const takenNames = accounts.filter((a) => a.id !== account?.id).map((a) => a.name);
@@ -43,23 +36,39 @@ function AccountForm({ account, onDone }) {
   const hasMovements =
     isEdit && movements.some((m) => m.accountId === account.id || m.toAccountId === account.id);
 
+  // What's in the account today (the number on the dashboard)
+  // shown Spanish-style ("1607,65"); the schema accepts the comma
+  const currentBalance = isEdit ? centsToInput(balances[account.id]) : "";
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm({
     resolver: zodResolver(makeAccountFormSchema(takenNames)),
     defaultValues: {
       name: account?.name ?? "",
       type: account?.type ?? "bank",
       currency: account?.currency ?? "EUR",
-      openingBalance: account ? String(account.openingBalance) : "",
+      balance: currentBalance,
     },
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => (isEdit ? updateAccount(account.id, data) : createAccount(data)),
+    mutationFn: ({ balance, ...fields }) => {
+      if (!isEdit) {
+        // A new account has no movements: what's in it now IS its opening balance
+        return createAccount({ ...fields, openingBalance: balance, updatedAt: today() });
+      }
+      const changes = { ...fields };
+      // Only touch the balance (and its "updated" date) if you actually changed it
+      if (dirtyFields.balance) {
+        changes.openingBalance = openingBalanceFor(balance, account.id, movements);
+        changes.updatedAt = today();
+      }
+      return updateAccount(account.id, changes);
+    },
     onSuccess: () => {
       // The accounts page of the cache is now out of date → Query fetches it again
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
@@ -85,9 +94,36 @@ function AccountForm({ account, onDone }) {
 
   const busy = saveMutation.isPending || deleteMutation.isPending;
 
+  const balanceField = (
+    <div className="field">
+      <label htmlFor="account-balance">Current balance</label>
+      <input
+        id="account-balance"
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder="0,00"
+        // When editing, the panel puts the cursor here first (see Dialog.jsx)
+        data-autofocus={isEdit ? "" : undefined}
+        aria-invalid={errors.balance ? "true" : "false"}
+        aria-describedby={
+          errors.balance ? "account-balance-hint account-balance-error" : "account-balance-hint"
+        }
+        {...register("balance", { setValueAs: toDotDecimal })}
+      />
+      <p id="account-balance-hint" className="hint">
+        What your bank app or wallet shows right now. No need to log a transaction.
+      </p>
+      <FieldError id="account-balance-error" error={errors.balance} />
+    </div>
+  );
+
   return (
     // noValidate: the browser's own checks are off, Zod is in charge of every message
     <form className="form" onSubmit={handleSubmit((data) => saveMutation.mutate(data))} noValidate>
+      {/* Balance-first: when editing, the number you came to change goes on top */}
+      {isEdit && balanceField}
+
       <div className="field">
         <label htmlFor="account-name">Name</label>
         <input
@@ -127,7 +163,7 @@ function AccountForm({ account, onDone }) {
           <p className="field-label">Currency</p>
           <p className="locked">
             {CURRENCIES.find((c) => c.value === account.currency).label}
-            <span className="hint"> · Locked because this account already has movements</span>
+            <span className="hint"> · Locked because this account already has activity</span>
           </p>
           <input type="hidden" {...register("currency")} />
         </div>
@@ -154,27 +190,7 @@ function AccountForm({ account, onDone }) {
         </fieldset>
       )}
 
-      <div className="field">
-        <label htmlFor="account-balance">Starting balance</label>
-        <input
-          id="account-balance"
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="0,00"
-          aria-invalid={errors.openingBalance ? "true" : "false"}
-          aria-describedby={
-            errors.openingBalance
-              ? "account-balance-hint account-balance-error"
-              : "account-balance-hint"
-          }
-          {...register("openingBalance", { setValueAs: commaToDot })}
-        />
-        <p id="account-balance-hint" className="hint">
-          How much was in it when you started using Clear Count.
-        </p>
-        <FieldError id="account-balance-error" error={errors.openingBalance} />
-      </div>
+      {!isEdit && balanceField}
 
       {/* Errors from the server (not from the rules) */}
       {saveMutation.isError && (
@@ -208,7 +224,7 @@ function AccountForm({ account, onDone }) {
       </div>
       {isEdit && hasMovements && (
         <p id="delete-hint" className="hint">
-          To delete this account, delete its movements first.
+          To delete this account, delete its activity first.
         </p>
       )}
     </form>

@@ -33,6 +33,30 @@ export function makeAmountSchema(emptyMessage = "Enter an amount") {
 
 export const amountSchema = makeAmountSchema();
 
+// Forms accept Spanish numbers. JavaScript only understands "1607.65", so:
+//   "12,50"    → "12.50"
+//   "1.607,65" → "1607.65"  (if there's a comma, the dots are thousands)
+//   "2.450"    → "2450"     (dot + exactly 3 digits = thousands: money never
+//                            has 3 decimals, so this can't be a decimal point)
+//   "12.50"    → "12.50"    (otherwise a dot is a normal decimal point)
+export function toDotDecimal(value) {
+  if (typeof value !== "string") return value;
+  const text = value.trim();
+  if (text.includes(",")) return text.replaceAll(".", "").replace(",", ".");
+  if (/^-?\d{1,3}(\.\d{3})+$/.test(text)) return text.replaceAll(".", "");
+  return text;
+}
+
+// Cents → the text a form box starts with, Spanish style: 4750 → "47,50"
+export function centsToInput(cents) {
+  return (cents / 100).toFixed(2).replace(".", ",");
+}
+
+// Only in forms: the server must always send real numbers.
+export function acceptComma(schema) {
+  return z.preprocess(toDotDecimal, schema);
+}
+
 // Like amountSchema but it can be 0 or negative (a starting balance).
 export const balanceSchema = z.preprocess(
   emptyToUndefined,

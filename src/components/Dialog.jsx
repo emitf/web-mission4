@@ -13,20 +13,20 @@ function Dialog({ open, title, onClose, children }) {
     const dialog = dialogRef.current;
     if (open && !dialog.open) {
       dialog.showModal();
-      // Start typing straight away: focus the first field
-      dialog.querySelector("input:not([type=hidden]), select, textarea")?.focus();
+      // Start typing straight away: the field marked data-autofocus, or else
+      // the first one. A number you came to change gets selected, ready to overwrite.
+      const first =
+        dialog.querySelector("[data-autofocus]") ??
+        dialog.querySelector("input:not([type=hidden]), select, textarea");
+      first?.focus();
+      if (first?.hasAttribute("data-autofocus")) first.select?.();
     } else if (!open && dialog.open) {
       dialog.close();
     }
   }, [open]);
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="dialog"
-      aria-labelledby="dialog-title"
-      onClose={onClose}
-    >
+    <dialog ref={dialogRef} className="dialog" aria-labelledby="dialog-title" onClose={onClose}>
       {open && (
         <>
           <div className="dialog-header">
