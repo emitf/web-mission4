@@ -71,7 +71,8 @@ export function validateEach(itemSchema, data, what) {
           field: issue.path.join(".") || "record",
           // A problem with no field = the entry isn't even an object (e.g. null)
           message: issue.path.length > 0 ? issue.message : "This isn't a valid record at all",
-          received: issue.path.length > 0 ? record?.[issue.path[0]] : undefined,
+          // Follow the whole path, so "totals.EUR" shows the EUR value, not all totals
+          received: issue.path.reduce((value, key) => value?.[key], record),
         })),
       });
     }

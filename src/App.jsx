@@ -10,6 +10,7 @@ import IouList from "./components/IouList.jsx";
 import IouForm from "./components/IouForm.jsx";
 import SettleIouForm from "./components/SettleIouForm.jsx";
 import ReviewPanel from "./components/ReviewPanel.jsx";
+import History from "./components/History.jsx";
 
 // The title of each panel
 const PANEL_TITLES = {
@@ -67,6 +68,7 @@ function App() {
           onAdd={() => setPanel({ kind: "iou" })}
           onSettle={(iou) => setPanel({ kind: "settle", iou })}
         />
+        <History displayCurrency={displayCurrency} />
       </main>
 
       <Dialog open={panel !== null} title={PANEL_TITLES[panel?.kind]} onClose={() => closePanel()}>

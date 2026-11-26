@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAccounts } from "../services/accounts.js";
 import { getIous } from "../services/ious.js";
+import { getSnapshots } from "../services/snapshots.js";
 import { queryKeys } from "../queryKeys.js";
 
 // The server answers come back as { items, rejected } (see validateEach).
@@ -27,4 +28,19 @@ export function useRejectedAccounts() {
 
 export function useRejectedIous() {
   return useQuery({ queryKey: queryKeys.ious, queryFn: getIous, select: selectRejected });
+}
+
+// History records, oldest first (the chart reads them left to right)
+const selectSnapshots = (data) => [...data.items].sort((a, b) => a.date.localeCompare(b.date));
+
+export function useSnapshots() {
+  return useQuery({
+    queryKey: queryKeys.snapshots,
+    queryFn: getSnapshots,
+    select: selectSnapshots,
+  });
+}
+
+export function useRejectedSnapshots() {
+  return useQuery({ queryKey: queryKeys.snapshots, queryFn: getSnapshots, select: selectRejected });
 }

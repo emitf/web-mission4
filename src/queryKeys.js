@@ -7,5 +7,6 @@
 export const queryKeys = {
   accounts: ["accounts"],
   ious: ["ious"],
+  snapshots: ["snapshots"],
   rate: (from, to) => ["rates", from, to],
 };

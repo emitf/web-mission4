@@ -9,6 +9,7 @@ import ConfirmDelete from "./ConfirmDelete.jsx";
 import Icon from "./Icon.jsx";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 import { useAccounts, useIous } from "../hooks/useServerData.js";
+import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 // Money people owe me and money I owe them.
 // Open ones first (soonest due on top); paid ones can be shown on demand.
@@ -80,6 +81,7 @@ function IouList({ onAdd, onSettle }) {
 
 function IouRow({ iou, onSettle }) {
   const queryClient = useQueryClient();
+  const recordSnapshot = useRecordSnapshot();
   const owedToMe = iou.direction === "owedToMe";
   const cents = toCents(iou.amount);
 
@@ -106,8 +108,15 @@ function IouRow({ iou, onSettle }) {
       if (account) await changeBalance(account, owedToMe ? -cents : cents);
       return updateIou(iou.id, { settled: false, settledAt: null, settledAccountId: null });
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      refresh();
+      if (iou.settledAccountId) await recordSnapshot(); // a balance went back
+    },
   });
+
+  // Who + how much, for the button labels: two IOUs with the same person must
+  // still sound different to a screen reader ("Marcelo, 688,95 €")
+  const who = `${iou.person}, ${formatMoney(cents, iou.currency)}`;
 
   // Due date text: "due 1 Dec", or in amber "overdue 8 days"
   const daysLate = daysBetween(iou.dueDate, today());
@@ -161,7 +170,7 @@ function IouRow({ iou, onSettle }) {
           className="button-small"
           onClick={() => undoMutation.mutate()}
           disabled={undoMutation.isPending}
-          aria-label={`Undo paid: ${iou.person}`}
+          aria-label={`Undo paid: ${who}`}
         >
           {undoMutation.isPending ? "Undoing…" : "Undo"}
         </button>
@@ -170,17 +179,17 @@ function IouRow({ iou, onSettle }) {
           type="button"
           className="button-small"
           onClick={onSettle}
-          aria-label={`Mark as paid: ${iou.person}`}
+          aria-label={`Mark as paid: ${who}`}
         >
           Paid
         </button>
       )}
 
       <ConfirmDelete
-        question={`Delete the IOU with ${iou.person}?`}
+        question={`Delete the IOU with ${who}?`}
         onConfirm={() => deleteMutation.mutate()}
         isPending={deleteMutation.isPending}
-        label={`Delete the IOU with ${iou.person}`}
+        label={`Delete the IOU with ${who}`}
         triggerClassName="icon-button row-delete"
       >
         ×

@@ -939,3 +939,125 @@ h3 {
   color: inherit;
 }
 
+/* ==========================================================
+   Stage 8 · History (chart + list)
+   ========================================================== */
+.chart {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.25rem 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.chart-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 140px;
+  display: block;
+  background: var(--tile);
+  border-radius: 12px;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-area {
+  fill: var(--blue-tint);
+}
+
+.chart-dates {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.history-row {
+  align-items: flex-start;
+}
+
+.history-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-details summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.25rem 0;
+  border-radius: 8px;
+}
+
+.history-details summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A small arrow that turns when the record is open */
+.history-details summary::before {
+  content: "›";
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.history-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.history-details summary .row-title {
+  flex: 1;
+}
+
+.history-numbers {
+  display: grid;
+  justify-items: end;
+}
+
+.history-breakdown {
+  list-style: none;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--tile);
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.history-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.125rem 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-details summary::before {
+    transition: none;
+  }
+}
+
+/* The change since the previous record: green if it went up, red if down
+   (more specific than .row-sub, which would otherwise make it grey) */
+.history-numbers .positive {
+  color: var(--positive);
+}
+
+.history-numbers .negative {
+  color: var(--negative);
+}

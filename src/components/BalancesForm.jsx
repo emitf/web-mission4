@@ -9,6 +9,7 @@ import { toCents } from "../utils/money.js";
 import Icon from "./Icon.jsx";
 import FieldError from "./FieldError.jsx";
 import { useAccounts } from "../hooks/useServerData.js";
+import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 const SYMBOL = { EUR: "€", USD: "$" };
 
@@ -17,6 +18,7 @@ const SYMBOL = { EUR: "€", USD: "$" };
 // your bank apps and wallet, save.
 function BalancesForm({ onDone }) {
   const queryClient = useQueryClient();
+  const recordSnapshot = useRecordSnapshot();
   // Already in the cache from the dashboard: no new request
   const { data: accounts = [] } = useAccounts();
 
@@ -47,7 +49,10 @@ function BalancesForm({ onDone }) {
     // onSettled (not onSuccess): if one PATCH fails, the others may already be
     // saved, so we refresh the accounts either way.
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-    onSuccess: () => onDone("Balances updated"),
+    onSuccess: async () => {
+      await recordSnapshot(); // today's point in the history
+      onDone("Balances updated");
+    },
   });
 
   if (accounts.length === 0) {

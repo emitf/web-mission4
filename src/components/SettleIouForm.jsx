@@ -9,11 +9,13 @@ import { queryKeys } from "../queryKeys.js";
 import { formatMoney, toCents } from "../utils/money.js";
 import FieldError from "./FieldError.jsx";
 import { useAccounts } from "../hooks/useServerData.js";
+import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 // "Mark as paid": closes the IOU and, if you say where the money went,
 // also adds it to (or takes it from) that account's balance.
 function SettleIouForm({ iou, onDone }) {
   const queryClient = useQueryClient();
+  const recordSnapshot = useRecordSnapshot();
   // Already in the cache from the dashboard: no new request
   const { data: accounts = [] } = useAccounts();
 
@@ -47,10 +49,11 @@ function SettleIouForm({ iou, onDone }) {
         settledAccountId: account?.id ?? null,
       });
     },
-    onSuccess: () => {
+    onSuccess: async (_saved, { accountId }) => {
       // Both changed: the IOUs (now paid) and the accounts (a balance moved)
       queryClient.invalidateQueries({ queryKey: queryKeys.ious });
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      if (accountId !== NO_ACCOUNT) await recordSnapshot(); // a balance changed
       onDone(owedToMe ? `${iou.person} paid you back` : `Marked as paid to ${iou.person}`);
     },
   });

@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRejectedAccounts, useRejectedIous } from "../hooks/useServerData.js";
+import {
+  useRejectedAccounts,
+  useRejectedIous,
+  useRejectedSnapshots,
+} from "../hooks/useServerData.js";
 import { deleteAccount } from "../services/accounts.js";
 import { deleteIou } from "../services/ious.js";
+import { deleteSnapshot } from "../services/snapshots.js";
 import { queryKeys } from "../queryKeys.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 
@@ -12,8 +17,9 @@ function ReviewPanel() {
   // Same cache entries as the lists (select picks the rejected part): no extra requests
   const { data: rejectedAccounts = [] } = useRejectedAccounts();
   const { data: rejectedIous = [] } = useRejectedIous();
+  const { data: rejectedSnapshots = [] } = useRejectedSnapshots();
 
-  const total = rejectedAccounts.length + rejectedIous.length;
+  const total = rejectedAccounts.length + rejectedIous.length + rejectedSnapshots.length;
   if (total === 0) return null;
 
   return (
@@ -35,6 +41,9 @@ function ReviewPanel() {
         {rejectedIous.map((entry, index) => (
           <ReviewRow key={`iou-${entry.record?.id ?? index}`} entry={entry} kind="iou" />
         ))}
+        {rejectedSnapshots.map((entry, index) => (
+          <ReviewRow key={`snapshot-${entry.record?.id ?? index}`} entry={entry} kind="snapshot" />
+        ))}
       </ul>
     </section>
   );
@@ -51,9 +60,27 @@ function ReviewRow({ entry, kind }) {
   const queryClient = useQueryClient();
   const { record, problems } = entry;
 
+  // What each kind of record is called, where its readable name is, how to
+  // delete it and which cache entry to refresh afterwards
+  const KINDS = {
+    account: {
+      noun: "Account",
+      label: record?.name,
+      remove: deleteAccount,
+      key: queryKeys.accounts,
+    },
+    iou: { noun: "IOU", label: record?.person, remove: deleteIou, key: queryKeys.ious },
+    snapshot: {
+      noun: "History record",
+      label: record?.date,
+      remove: deleteSnapshot,
+      key: queryKeys.snapshots,
+    },
+  };
+  const { noun, label, remove, key } = KINDS[kind];
+
   // A readable name even if the name itself is the broken part
-  const label = kind === "account" ? record?.name : record?.person;
-  const title = `${kind === "account" ? "Account" : "IOU"} ${
+  const title = `${noun} ${
     typeof label === "string" && label.trim() ? `"${label}"` : `#${record?.id ?? "?"}`
   }`;
 
@@ -61,11 +88,8 @@ function ReviewRow({ entry, kind }) {
   const id = typeof record?.id === "string" && record.id ? record.id : null;
 
   const deleteMutation = useMutation({
-    mutationFn: () => (kind === "account" ? deleteAccount(id) : deleteIou(id)),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: kind === "account" ? queryKeys.accounts : queryKeys.ious,
-      }),
+    mutationFn: () => remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
   return (

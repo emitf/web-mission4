@@ -63,5 +63,177 @@
       "settled": false,
       "note": "Taxi from the airport"
     }
+  ],
+  "snapshots": [
+    {
+      "id": "week-1",
+      "date": "2026-10-26",
+      "accounts": [
+        {
+          "accountId": "main-bank",
+          "name": "Main bank",
+          "currency": "EUR",
+          "balance": 912.4
+        },
+        {
+          "accountId": "savings",
+          "name": "Savings",
+          "currency": "EUR",
+          "balance": 2250
+        },
+        {
+          "accountId": "cash-eur",
+          "name": "Wallet (euros)",
+          "currency": "EUR",
+          "balance": 80
+        },
+        {
+          "accountId": "cash-usd",
+          "name": "Wallet (dollars)",
+          "currency": "USD",
+          "balance": 0
+        }
+      ],
+      "totals": {
+        "EUR": 3242.4,
+        "USD": 3545.54
+      }
+    },
+    {
+      "id": "week-2",
+      "date": "2026-11-02",
+      "accounts": [
+        {
+          "accountId": "main-bank",
+          "name": "Main bank",
+          "currency": "EUR",
+          "balance": 1104.1
+        },
+        {
+          "accountId": "savings",
+          "name": "Savings",
+          "currency": "EUR",
+          "balance": 2250
+        },
+        {
+          "accountId": "cash-eur",
+          "name": "Wallet (euros)",
+          "currency": "EUR",
+          "balance": 35.5
+        },
+        {
+          "accountId": "cash-usd",
+          "name": "Wallet (dollars)",
+          "currency": "USD",
+          "balance": 0
+        }
+      ],
+      "totals": {
+        "EUR": 3389.6,
+        "USD": 3706.51
+      }
+    },
+    {
+      "id": "week-3",
+      "date": "2026-11-09",
+      "accounts": [
+        {
+          "accountId": "main-bank",
+          "name": "Main bank",
+          "currency": "EUR",
+          "balance": 987.25
+        },
+        {
+          "accountId": "savings",
+          "name": "Savings",
+          "currency": "EUR",
+          "balance": 2325
+        },
+        {
+          "accountId": "cash-eur",
+          "name": "Wallet (euros)",
+          "currency": "EUR",
+          "balance": 60
+        },
+        {
+          "accountId": "cash-usd",
+          "name": "Wallet (dollars)",
+          "currency": "USD",
+          "balance": 0
+        }
+      ],
+      "totals": {
+        "EUR": 3372.25,
+        "USD": 3687.53
+      }
+    },
+    {
+      "id": "week-4",
+      "date": "2026-11-16",
+      "accounts": [
+        {
+          "accountId": "main-bank",
+          "name": "Main bank",
+          "currency": "EUR",
+          "balance": 1011.8
+        },
+        {
+          "accountId": "savings",
+          "name": "Savings",
+          "currency": "EUR",
+          "balance": 2400
+        },
+        {
+          "accountId": "cash-eur",
+          "name": "Wallet (euros)",
+          "currency": "EUR",
+          "balance": 22.3
+        },
+        {
+          "accountId": "cash-usd",
+          "name": "Wallet (dollars)",
+          "currency": "USD",
+          "balance": 174.2
+        }
+      ],
+      "totals": {
+        "EUR": 3593.41,
+        "USD": 3929.37
+      }
+    },
+    {
+      "id": "week-5",
+      "date": "2026-11-23",
+      "accounts": [
+        {
+          "accountId": "main-bank",
+          "name": "Main bank",
+          "currency": "EUR",
+          "balance": 1057.65
+        },
+        {
+          "accountId": "savings",
+          "name": "Savings",
+          "currency": "EUR",
+          "balance": 2400
+        },
+        {
+          "accountId": "cash-eur",
+          "name": "Wallet (euros)",
+          "currency": "EUR",
+          "balance": 47.5
+        },
+        {
+          "accountId": "cash-usd",
+          "name": "Wallet (dollars)",
+          "currency": "USD",
+          "balance": 174.2
+        }
+      ],
+      "totals": {
+        "EUR": 3664.46,
+        "USD": 4007.06
+      }
+    }
   ]
 }

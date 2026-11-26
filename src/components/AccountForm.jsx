@@ -9,6 +9,7 @@ import { toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 import FieldError from "./FieldError.jsx";
 import { useAccounts } from "../hooks/useServerData.js";
+import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 const TYPES = [
   { value: "bank", label: "Bank" },
@@ -27,6 +28,7 @@ const CURRENCIES = [
 function AccountForm({ account, onDone }) {
   const isEdit = Boolean(account);
   const queryClient = useQueryClient();
+  const recordSnapshot = useRecordSnapshot();
 
   // Already in the cache from the dashboard: no new request
   const { data: accounts = [] } = useAccounts();
@@ -51,15 +53,18 @@ function AccountForm({ account, onDone }) {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    // balanceChanged: a new account, or you edited the balance (not just the name)
+    mutationFn: ({ data, balanceChanged }) => {
       if (!isEdit) return createAccount({ ...data, updatedAt: today() });
       // "Updated today" only if you actually changed the balance
-      const changes = dirtyFields.balance ? { ...data, updatedAt: today() } : data;
+      const changes = balanceChanged ? { ...data, updatedAt: today() } : data;
       return updateAccount(account.id, changes);
     },
-    onSuccess: () => {
+    onSuccess: async (_saved, { balanceChanged }) => {
       // The accounts page of the cache is now out of date → Query fetches it again
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      // A balance changed → today's point in the history
+      if (balanceChanged) await recordSnapshot();
       // Clear the form only once the server said yes (if it fails, you keep what you typed)
       reset();
       onDone(isEdit ? "Changes saved" : "Account added");
@@ -68,8 +73,9 @@ function AccountForm({ account, onDone }) {
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteAccount(account.id),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await recordSnapshot(); // the total changed
       onDone("Account deleted");
     },
   });
@@ -100,7 +106,13 @@ function AccountForm({ account, onDone }) {
 
   return (
     // noValidate: the browser's own checks are off, Zod is in charge of every message
-    <form className="form" onSubmit={handleSubmit((data) => saveMutation.mutate(data))} noValidate>
+    <form
+      className="form"
+      onSubmit={handleSubmit((data) =>
+        saveMutation.mutate({ data, balanceChanged: !isEdit || Boolean(dirtyFields.balance) }),
+      )}
+      noValidate
+    >
       {/* Balance-first: when editing, the number you came to change goes on top */}
       {isEdit && balanceField}
 
