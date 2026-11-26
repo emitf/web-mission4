@@ -1,4 +1,5 @@
 import { useMoneySummary } from "../hooks/useMoneySummary.js";
+import { useRejectedAccounts, useRejectedIous } from "../hooks/useServerData.js";
 import { formatMoney, formatShortDate, otherCurrency, splitMoney } from "../utils/money.js";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
@@ -46,7 +47,25 @@ function TotalBalance({ displayCurrency, onCurrencyChange }) {
       {accountsQuery.isSuccess && (
         <HeroAmount summary={summary} displayCurrency={displayCurrency} />
       )}
+      <NotCountedWarning />
     </section>
+  );
+}
+
+// The total must never silently lie: if some records were set aside, say so
+function NotCountedWarning() {
+  const { data: accounts = [] } = useRejectedAccounts();
+  const { data: ious = [] } = useRejectedIous();
+  const parts = [];
+  if (accounts.length > 0)
+    parts.push(`${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}`);
+  if (ious.length > 0) parts.push(`${ious.length} ${ious.length === 1 ? "IOU" : "IOUs"}`);
+  if (parts.length === 0) return null;
+  return (
+    <p className="not-counted">
+      {parts.join(" and ")} {accounts.length + ious.length === 1 ? "isn't" : "aren't"} included
+      because the data looks wrong. See <a href="#review-title">Needs review</a>.
+    </p>
   );
 }
 

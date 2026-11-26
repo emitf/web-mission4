@@ -1,10 +1,11 @@
-import { request, validate } from "./http.js";
-import { accountListSchema, accountSchema } from "../schemas/account.js";
+import { request, validate, validateEach } from "./http.js";
+import { accountSchema } from "../schemas/account.js";
 import { fromCents, toCents } from "../utils/money.js";
 
+// Returns { items, rejected }: each account is checked on its own
 export async function getAccounts({ signal } = {}) {
   const data = await request("/accounts", { signal });
-  return validate(accountListSchema, data, "the accounts");
+  return validateEach(accountSchema, data, "the accounts");
 }
 
 export async function createAccount(newAccount) {

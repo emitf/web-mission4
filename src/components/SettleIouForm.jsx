@@ -1,20 +1,21 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { NO_ACCOUNT, makeSettleFormSchema } from "../schemas/iou.js";
 import { today } from "../schemas/common.js";
 import { updateIou } from "../services/ious.js";
-import { changeBalance, getAccounts } from "../services/accounts.js";
+import { changeBalance } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { formatMoney, toCents } from "../utils/money.js";
 import FieldError from "./FieldError.jsx";
+import { useAccounts } from "../hooks/useServerData.js";
 
 // "Mark as paid": closes the IOU and, if you say where the money went,
 // also adds it to (or takes it from) that account's balance.
 function SettleIouForm({ iou, onDone }) {
   const queryClient = useQueryClient();
   // Already in the cache from the dashboard: no new request
-  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
+  const { data: accounts = [] } = useAccounts();
 
   const owedToMe = iou.direction === "owedToMe";
   // Only accounts in the IOU's currency: 25 € don't land in a dollar wallet

@@ -1,9 +1,10 @@
-import { request, validate } from "./http.js";
-import { iouListSchema, iouSchema } from "../schemas/iou.js";
+import { request, validate, validateEach } from "./http.js";
+import { iouSchema } from "../schemas/iou.js";
 
+// Returns { items, rejected }: each IOU is checked on its own
 export async function getIous({ signal } = {}) {
   const data = await request("/ious", { signal });
-  return validate(iouListSchema, data, "the IOUs");
+  return validateEach(iouSchema, data, "the IOUs");
 }
 
 // A new IOU always starts unpaid.

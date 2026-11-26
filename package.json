@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/ensure-db.js",
+    "predev": "node scripts/first-run.js",
     "dev": "concurrently -n web,api -c cyan,magenta \"vite\" \"json-server db.json --port 3001\"",
-    "preapi": "node scripts/ensure-db.js",
+    "preapi": "node scripts/first-run.js",
     "api": "json-server db.json --port 3001",
+    "prebuild": "node scripts/first-run.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

@@ -9,6 +9,7 @@ import BalancesForm from "./components/BalancesForm.jsx";
 import IouList from "./components/IouList.jsx";
 import IouForm from "./components/IouForm.jsx";
 import SettleIouForm from "./components/SettleIouForm.jsx";
+import ReviewPanel from "./components/ReviewPanel.jsx";
 
 // The title of each panel
 const PANEL_TITLES = {
@@ -56,6 +57,7 @@ function App() {
           </button>
           <SummaryTiles displayCurrency={displayCurrency} />
         </div>
+        <ReviewPanel />
         <AccountList
           displayCurrency={displayCurrency}
           onAdd={() => setPanel({ kind: "account" })}

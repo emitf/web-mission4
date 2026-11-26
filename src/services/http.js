@@ -45,3 +45,40 @@ export function validate(schema, data, what) {
   }
   return result.data;
 }
+
+// The bonus: check a LIST one record at a time with safeParse.
+// One broken record no longer hides all the others: the good ones come back
+// in `items`, the broken ones in `rejected` together with what's wrong.
+// (If the answer isn't even a list, e.g. an HTML error page, the whole thing
+// is still an error, like validate() above.)
+export function validateEach(itemSchema, data, what) {
+  if (!Array.isArray(data)) {
+    const error = new Error(`The server sent ${what} in an unexpected format.`);
+    error.name = "ValidationError";
+    throw error;
+  }
+
+  const items = [];
+  const rejected = [];
+  for (const record of data) {
+    const result = itemSchema.safeParse(record);
+    if (result.success) {
+      items.push(result.data);
+    } else {
+      rejected.push({
+        record,
+        problems: result.error.issues.map((issue) => ({
+          field: issue.path.join(".") || "record",
+          // A problem with no field = the entry isn't even an object (e.g. null)
+          message: issue.path.length > 0 ? issue.message : "This isn't a valid record at all",
+          received: issue.path.length > 0 ? record?.[issue.path[0]] : undefined,
+        })),
+      });
+    }
+  }
+
+  if (rejected.length > 0) {
+    console.warn(`${rejected.length} of ${what} didn't pass the rules:`, rejected);
+  }
+  return { items, rejected };
+}

@@ -13,7 +13,7 @@ export const ACCOUNT_TYPES = ["bank", "savings", "cash"];
 // The fields every account has, shared by the forms and the API response.
 const accountBase = {
   name: z
-    .string()
+    .string({ error: "Write a name for the account" })
     .trim()
     .min(2, "The name needs at least 2 characters")
     .max(30, "Keep the name under 30 characters"),
@@ -74,4 +74,3 @@ export const accountSchema = z.object({
   balance: balanceSchema,
   updatedAt: isoDateSchema.optional(),
 });
-export const accountListSchema = z.array(accountSchema);

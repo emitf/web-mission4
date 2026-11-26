@@ -13,7 +13,7 @@ export const IOU_DIRECTIONS = ["owedToMe", "iOwe"];
 // The plain fields of an IOU, shared by the form and the API response.
 const iouFields = z.object({
   person: z
-    .string()
+    .string({ error: "Write who it is" })
     .trim()
     .min(2, "Write at least 2 characters of their name")
     .max(40, "Keep the name under 40 characters"),
@@ -51,7 +51,6 @@ export const iouSchema = iouRules(
     settledAccountId: z.string().nullish(),
   }),
 );
-export const iouListSchema = z.array(iouSchema);
 
 // "Mark as paid": which account the money went into / came out of.
 // NO_ACCOUNT = just close the IOU without changing any balance.

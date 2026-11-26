@@ -1,13 +1,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { balancesFormSchema } from "../schemas/account.js";
 import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
-import { getAccounts, updateAccount } from "../services/accounts.js";
+import { updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { toCents } from "../utils/money.js";
 import Icon from "./Icon.jsx";
 import FieldError from "./FieldError.jsx";
+import { useAccounts } from "../hooks/useServerData.js";
 
 const SYMBOL = { EUR: "€", USD: "$" };
 
@@ -17,7 +18,7 @@ const SYMBOL = { EUR: "€", USD: "$" };
 function BalancesForm({ onDone }) {
   const queryClient = useQueryClient();
   // Already in the cache from the dashboard: no new request
-  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
+  const { data: accounts = [] } = useAccounts();
 
   const {
     register,

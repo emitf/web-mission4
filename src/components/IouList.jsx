@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteIou, getIous, updateIou } from "../services/ious.js";
-import { changeBalance, getAccounts } from "../services/accounts.js";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteIou, updateIou } from "../services/ious.js";
+import { changeBalance } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { today } from "../schemas/common.js";
 import { daysBetween, formatMoney, formatShortDate, toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 import Icon from "./Icon.jsx";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
+import { useAccounts, useIous } from "../hooks/useServerData.js";
 
 // Money people owe me and money I owe them.
 // Open ones first (soonest due on top); paid ones can be shown on demand.
@@ -15,7 +16,7 @@ function IouList({ onAdd, onSettle }) {
   const [showPaid, setShowPaid] = useState(false);
 
   // Same key as the summary tiles → shared cache, one request
-  const iousQuery = useQuery({ queryKey: queryKeys.ious, queryFn: getIous });
+  const iousQuery = useIous();
 
   const ious = iousQuery.data ?? [];
   const open = ious
@@ -83,7 +84,7 @@ function IouRow({ iou, onSettle }) {
   const cents = toCents(iou.amount);
 
   // Already in the cache from the dashboard: needed by "Undo"
-  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
+  const { data: accounts = [] } = useAccounts();
 
   // Undo can change an account's balance too, so both lists get refreshed
   const refresh = () => {

@@ -1,9 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { getAccounts } from "../services/accounts.js";
-import { getIous } from "../services/ious.js";
-import { queryKeys } from "../queryKeys.js";
 import { otherCurrency, toCents, toDisplayCents } from "../utils/money.js";
 import { useExchangeRate } from "./useExchangeRate.js";
+import { useAccounts, useIous } from "./useServerData.js";
 
 // Adds up cents; null if any of them couldn't be converted (no rate yet)
 function sum(values) {
@@ -16,8 +13,8 @@ function sum(values) {
 // The total, the tiles and the account list all call this hook, but TanStack
 // Query shares the cache: accounts, IOUs and the rate are requested ONCE (dedupe).
 export function useMoneySummary(displayCurrency) {
-  const accountsQuery = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
-  const iousQuery = useQuery({ queryKey: queryKeys.ious, queryFn: getIous });
+  const accountsQuery = useAccounts();
+  const iousQuery = useIous();
 
   const accounts = accountsQuery.data ?? [];
   const openIous = (iousQuery.data ?? []).filter((iou) => !iou.settled);

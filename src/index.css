@@ -897,3 +897,45 @@ h3 {
 .form-actions-start .confirm-question {
   flex-basis: 100%;
 }
+
+/* ==========================================================
+   Stage 7 · Needs review (corrupt data)
+   ========================================================== */
+.review {
+  border-left: 3px solid var(--warning);
+  padding-left: 1rem;
+}
+
+.review h2 {
+  color: var(--warning);
+}
+
+.review-count {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.review-row {
+  align-items: flex-start;
+}
+
+.review-problems {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+}
+
+.review-received {
+  color: var(--muted);
+}
+
+.not-counted {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--warning);
+}
+
+.not-counted a {
+  color: inherit;
+}
+

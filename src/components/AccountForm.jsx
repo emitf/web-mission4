@@ -1,13 +1,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { makeAccountFormSchema } from "../schemas/account.js";
 import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
-import { createAccount, deleteAccount, getAccounts, updateAccount } from "../services/accounts.js";
+import { createAccount, deleteAccount, updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 import FieldError from "./FieldError.jsx";
+import { useAccounts } from "../hooks/useServerData.js";
 
 const TYPES = [
   { value: "bank", label: "Bank" },
@@ -28,7 +29,7 @@ function AccountForm({ account, onDone }) {
   const queryClient = useQueryClient();
 
   // Already in the cache from the dashboard: no new request
-  const { data: accounts = [] } = useQuery({ queryKey: queryKeys.accounts, queryFn: getAccounts });
+  const { data: accounts = [] } = useAccounts();
 
   // Names used by OTHER accounts (so an edit can keep its own name)
   const takenNames = accounts.filter((a) => a.id !== account?.id).map((a) => a.name);
