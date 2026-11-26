@@ -1090,3 +1090,20 @@ h3 {
 .iou-error {
   flex-basis: 100%;
 }
+
+/* "Fix this record" */
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.fix-note {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid var(--warning);
+  border-radius: 6px;
+  background: var(--tile);
+  font-size: 0.875rem;
+}

@@ -48,7 +48,7 @@ export const iouFormSchema = iouRules(iouFields.extend({ amount: acceptComma(amo
 export const iouSchema = iouRules(
   iouFields.extend({
     id: idSchema,
-    settled: z.boolean(),
+    settled: z.boolean({ error: "Missing whether it's paid or not" }),
     settledAt: isoDateSchema.nullish(),
     settledAccountId: z.string().nullish(),
   }),

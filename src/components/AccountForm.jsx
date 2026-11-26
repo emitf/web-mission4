@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +26,10 @@ const CURRENCIES = [
 // One form for both jobs:
 // - account = undefined → create a new account (POST)
 // - account = {...}     → edit that account (PATCH), starting from its values
-function AccountForm({ account, onDone }) {
+// - fixing = true       → the account came from "Needs review": only its valid
+//                         fields are filled in, and the broken ones show their
+//                         errors straight away so you know what to fix
+function AccountForm({ account, fixing = false, onDone }) {
   const isEdit = Boolean(account);
   const queryClient = useQueryClient();
   const recordSnapshot = useRecordSnapshot();
@@ -40,17 +44,28 @@ function AccountForm({ account, onDone }) {
     register,
     handleSubmit,
     reset,
+    trigger,
     formState: { errors, dirtyFields },
   } = useForm({
+    // Fixing: re-check while you type, so each mark disappears as soon as it's fixed
+    // (normally the rules only run when you press Save)
+    mode: fixing ? "onChange" : "onSubmit",
     resolver: zodResolver(makeAccountFormSchema(takenNames)),
     defaultValues: {
       name: account?.name ?? "",
       type: account?.type ?? "bank",
       currency: account?.currency ?? "EUR",
       // shown Spanish-style ("1607,65"); the schema accepts the comma
-      balance: isEdit ? centsToInput(toCents(account.balance)) : "",
+      // (a broken record may have no usable balance: then it starts empty)
+      balance: isEdit && account.balance !== "" ? centsToInput(toCents(account.balance)) : "",
     },
   });
+
+  // Fixing a broken record: run the rules once when the form opens, so the
+  // fields that need fixing are already marked (this is DOM/form work, not fetching)
+  useEffect(() => {
+    if (fixing) trigger(undefined, { shouldFocus: true }); // and put the cursor on the first one
+  }, [fixing, trigger]);
 
   const saveMutation = useMutation({
     // balanceChanged: a new account, or you edited the balance (not just the name)
@@ -67,7 +82,7 @@ function AccountForm({ account, onDone }) {
       if (balanceChanged) await recordSnapshot();
       // Clear the form only once the server said yes (if it fails, you keep what you typed)
       reset();
-      onDone(isEdit ? "Changes saved" : "Account added");
+      onDone(fixing ? "Account fixed" : isEdit ? "Changes saved" : "Account added");
     },
   });
 
@@ -109,10 +124,19 @@ function AccountForm({ account, onDone }) {
     <form
       className="form"
       onSubmit={handleSubmit((data) =>
-        saveMutation.mutate({ data, balanceChanged: !isEdit || Boolean(dirtyFields.balance) }),
+        saveMutation.mutate({
+          data,
+          balanceChanged: !isEdit || fixing || Boolean(dirtyFields.balance),
+        }),
       )}
       noValidate
     >
+      {fixing && (
+        <p className="fix-note">
+          This account had data that didn&apos;t look right. Fix the marked fields and save.
+        </p>
+      )}
+
       {/* Balance-first: when editing, the number you came to change goes on top */}
       {isEdit && balanceField}
 
@@ -204,7 +228,13 @@ function AccountForm({ account, onDone }) {
           className="button-primary"
           disabled={saveMutation.isPending || deleteMutation.isPending}
         >
-          {saveMutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Add account"}
+          {saveMutation.isPending
+            ? "Saving…"
+            : fixing
+              ? "Save fix"
+              : isEdit
+                ? "Save changes"
+                : "Add account"}
         </button>
       </div>
     </form>

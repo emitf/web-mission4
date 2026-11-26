@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +22,8 @@ const CURRENCIES = [
 // One form for both jobs, like the account form:
 // - iou = undefined → add a new IOU (POST)
 // - iou = {...}     → edit it (PATCH), starting from its current values
-function IouForm({ iou, onDone }) {
+// - fixing = true → the IOU came from "Needs review" (see AccountForm)
+function IouForm({ iou, fixing = false, onDone }) {
   const isEdit = Boolean(iou);
   const queryClient = useQueryClient();
 
@@ -29,14 +31,18 @@ function IouForm({ iou, onDone }) {
     register,
     handleSubmit,
     reset,
+    trigger,
     formState: { errors },
   } = useForm({
+    // Fixing: re-check while you type, so each mark disappears as soon as it's fixed
+    // (normally the rules only run when you press Save)
+    mode: fixing ? "onChange" : "onSubmit",
     resolver: zodResolver(iouFormSchema),
     defaultValues: isEdit
       ? {
           direction: iou.direction,
           person: iou.person,
-          amount: centsToInput(toCents(iou.amount)), // "688,95"
+          amount: iou.amount === "" ? "" : centsToInput(toCents(iou.amount)), // "688,95"
           currency: iou.currency,
           dateLent: iou.dateLent,
           dueDate: iou.dueDate,
@@ -53,18 +59,32 @@ function IouForm({ iou, onDone }) {
         },
   });
 
+  // Fixing a broken record: mark the fields that need fixing as soon as it opens
+  useEffect(() => {
+    if (fixing) trigger(undefined, { shouldFocus: true }); // and put the cursor on the first one
+  }, [fixing, trigger]);
+
   const mutation = useMutation({
-    mutationFn: (data) => (isEdit ? updateIou(iou.id, data) : createIou(data)),
+    // A fixed IOU also gets a proper "settled" (a broken one may be missing it)
+    mutationFn: (data) => {
+      if (!isEdit) return createIou(data);
+      return updateIou(iou.id, fixing ? { ...data, settled: iou.settled } : data);
+    },
     onSuccess: () => {
       // Only the IOUs changed: the tiles and the IOU list refresh by themselves
       queryClient.invalidateQueries({ queryKey: queryKeys.ious });
       reset();
-      onDone(isEdit ? "IOU updated" : "IOU added");
+      onDone(fixing ? "IOU fixed" : isEdit ? "IOU updated" : "IOU added");
     },
   });
 
   return (
     <form className="form" onSubmit={handleSubmit((data) => mutation.mutate(data))} noValidate>
+      {fixing && (
+        <p className="fix-note">
+          This IOU had data that didn&apos;t look right. Fix the marked fields and save.
+        </p>
+      )}
       <fieldset className="field">
         <legend className="visually-hidden">Who owes whom?</legend>
         <div className="segmented segmented-wide">
@@ -181,7 +201,13 @@ function IouForm({ iou, onDone }) {
 
       <div className="form-actions">
         <button type="submit" className="button-primary" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Add IOU"}
+          {mutation.isPending
+            ? "Saving…"
+            : fixing
+              ? "Save fix"
+              : isEdit
+                ? "Save changes"
+                : "Add IOU"}
         </button>
       </div>
     </form>

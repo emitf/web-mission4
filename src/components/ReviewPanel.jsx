@@ -9,11 +9,13 @@ import { deleteIou } from "../services/ious.js";
 import { deleteSnapshot } from "../services/snapshots.js";
 import { queryKeys } from "../queryKeys.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
+import { salvageAccount, salvageIou } from "../utils/salvage.js";
 
 // "Needs review": records from the server that failed their Zod schema.
 // They are NOT counted anywhere; this panel says what's wrong with each one.
 // It only appears when there is something to review.
-function ReviewPanel() {
+// onFix(kind, salvagedRecord) opens the right form in "fix" mode
+function ReviewPanel({ onFix }) {
   // Same cache entries as the lists (select picks the rejected part): no extra requests
   const { data: rejectedAccounts = [] } = useRejectedAccounts();
   const { data: rejectedIous = [] } = useRejectedIous();
@@ -36,10 +38,20 @@ function ReviewPanel() {
 
       <ul className="rows">
         {rejectedAccounts.map((entry, index) => (
-          <ReviewRow key={`account-${entry.record?.id ?? index}`} entry={entry} kind="account" />
+          <ReviewRow
+            key={`account-${entry.record?.id ?? index}`}
+            entry={entry}
+            kind="account"
+            onFix={onFix}
+          />
         ))}
         {rejectedIous.map((entry, index) => (
-          <ReviewRow key={`iou-${entry.record?.id ?? index}`} entry={entry} kind="iou" />
+          <ReviewRow
+            key={`iou-${entry.record?.id ?? index}`}
+            entry={entry}
+            kind="iou"
+            onFix={onFix}
+          />
         ))}
         {rejectedSnapshots.map((entry, index) => (
           <ReviewRow key={`snapshot-${entry.record?.id ?? index}`} entry={entry} kind="snapshot" />
@@ -56,7 +68,7 @@ function showValue(value) {
   return text.length > 30 ? `${text.slice(0, 30)}…` : text;
 }
 
-function ReviewRow({ entry, kind }) {
+function ReviewRow({ entry, kind, onFix }) {
   const queryClient = useQueryClient();
   const { record, problems } = entry;
 
@@ -114,14 +126,29 @@ function ReviewRow({ entry, kind }) {
       </span>
 
       {id ? (
-        <ConfirmDelete
-          question="Delete this broken record?"
-          onConfirm={() => deleteMutation.mutate()}
-          isPending={deleteMutation.isPending}
-          triggerClassName="button-small"
-        >
-          Delete this record
-        </ConfirmDelete>
+        <span className="review-actions">
+          {/* Accounts and IOUs can be repaired in their normal form; a broken
+              history record is just an old photo, so it can only be deleted */}
+          {onFix && kind !== "snapshot" && (
+            <button
+              type="button"
+              className="button-small"
+              onClick={() =>
+                onFix(kind, kind === "account" ? salvageAccount(record) : salvageIou(record))
+              }
+            >
+              Fix this record
+            </button>
+          )}
+          <ConfirmDelete
+            question="Delete this broken record?"
+            onConfirm={() => deleteMutation.mutate()}
+            isPending={deleteMutation.isPending}
+            triggerClassName="button-small"
+          >
+            Delete this record
+          </ConfirmDelete>
+        </span>
       ) : (
         <span className="hint">No id: fix it by hand in db.json</span>
       )}
