@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteIou, updateIou } from "../services/ious.js";
-import { changeBalance } from "../services/accounts.js";
+import { deleteIou } from "../services/ious.js";
+import { undoSettleIou } from "../services/payments.js";
 import { queryKeys } from "../queryKeys.js";
 import { today } from "../schemas/common.js";
 import { daysBetween, formatMoney, formatShortDate, toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 import Icon from "./Icon.jsx";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
-import { useAccounts, useIous } from "../hooks/useServerData.js";
+import { useIous } from "../hooks/useServerData.js";
 import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
 // Money people owe me and money I owe them.
@@ -90,8 +90,6 @@ function IouRow({ iou, onSettle, onEdit }) {
   const owedToMe = iou.direction === "owedToMe";
   const cents = toCents(iou.amount);
 
-  // Already in the cache from the dashboard: needed by "Undo"
-  const { data: accounts = [] } = useAccounts();
 
   // Undo can change an account's balance too, so both lists get refreshed
   const refresh = () => {
@@ -104,15 +102,10 @@ function IouRow({ iou, onSettle, onEdit }) {
     onSuccess: refresh,
   });
 
-  // Undo a "Mark as paid": take the money back out of (or put it back into)
-  // the account it went to, and reopen the IOU.
+  // Undo a "Mark as paid": the money goes back and the IOU reopens.
+  // Done safely in the payments service (if one step fails, the other is undone).
   const undoMutation = useMutation({
-    mutationFn: async () => {
-      // If that account was deleted since, there's no balance to fix
-      const account = accounts.find((a) => a.id === iou.settledAccountId);
-      if (account) await changeBalance(account, owedToMe ? -cents : cents);
-      return updateIou(iou.id, { settled: false, settledAt: null, settledAccountId: null });
-    },
+    mutationFn: () => undoSettleIou(iou),
     onSuccess: async () => {
       refresh();
       if (iou.settledAccountId) await recordSnapshot(); // a balance went back

@@ -22,7 +22,9 @@ export async function request(path, { method = "GET", body, signal } = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(`Server error (${response.status}). Please try again.`);
+    const error = new Error(`Server error (${response.status}). Please try again.`);
+    error.status = response.status; // so callers can tell "not found" (404) apart
+    throw error;
   }
 
   // 204 No Content: nothing to parse

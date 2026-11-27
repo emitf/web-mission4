@@ -2,12 +2,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { NO_ACCOUNT, makeSettleFormSchema } from "../schemas/iou.js";
-import { today } from "../schemas/common.js";
-import { updateIou } from "../services/ious.js";
-import { changeBalance } from "../services/accounts.js";
+import { settleIou } from "../services/payments.js";
 import { queryKeys } from "../queryKeys.js";
 import { formatMoney, toCents } from "../utils/money.js";
-import FieldError from "./FieldError.jsx";
+import { SelectField } from "./Field.jsx";
+import { CURRENCY_INFO } from "../constants.js";
 import { useAccounts } from "../hooks/useServerData.js";
 import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
@@ -35,20 +34,9 @@ function SettleIouForm({ iou, onDone }) {
   });
 
   const mutation = useMutation({
-    // Two saves in a row: first the account's balance, then the IOU itself,
-    // which remembers the account so "Undo" can put the balance back.
-    mutationFn: async ({ accountId }) => {
-      const account = accounts.find((a) => a.id === accountId);
-      if (account) {
-        const cents = toCents(iou.amount);
-        await changeBalance(account, owedToMe ? cents : -cents);
-      }
-      return updateIou(iou.id, {
-        settled: true,
-        settledAt: today(),
-        settledAccountId: account?.id ?? null,
-      });
-    },
+    // Two saves in a row (the balance, then the IOU), done safely in the
+    // payments service: if the second fails, the first is put back.
+    mutationFn: ({ accountId }) => settleIou(iou, accountId === NO_ACCOUNT ? null : accountId),
     onSuccess: async (_saved, { accountId }) => {
       // Both changed: the IOUs (now paid) and the accounts (a balance moved)
       queryClient.invalidateQueries({ queryKey: queryKeys.ious });
@@ -68,32 +56,21 @@ function SettleIouForm({ iou, onDone }) {
         {iou.note ? ` · ${iou.note}` : ""}
       </p>
 
-      <div className="field">
-        <label htmlFor="settle-account">
-          {owedToMe ? "Where did the money go?" : "Where did the money come from?"}
-        </label>
-        <select
-          id="settle-account"
-          aria-invalid={errors.accountId ? "true" : "false"}
-          aria-describedby={
-            errors.accountId ? "settle-account-hint settle-account-error" : "settle-account-hint"
-          }
-          {...register("accountId")}
-        >
-          {options.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-          <option value={NO_ACCOUNT}>Don&apos;t change any balance</option>
-        </select>
-        <p id="settle-account-hint" className="hint">
-          {options.length > 0
+      <SelectField
+        id="settle-account"
+        label={owedToMe ? "Where did the money go?" : "Where did the money come from?"}
+        hint={
+          options.length > 0
             ? `That account's balance will ${owedToMe ? "go up" : "go down"} by ${amountText}.`
-            : `You have no accounts in ${iou.currency === "USD" ? "dollars" : "euros"}, so no balance will change.`}
-        </p>
-        <FieldError id="settle-account-error" error={errors.accountId} />
-      </div>
+            : `You have no accounts in ${CURRENCY_INFO[iou.currency].name}, so no balance will change.`
+        }
+        options={[
+          ...options.map((account) => ({ value: account.id, label: account.name })),
+          { value: NO_ACCOUNT, label: "Don't change any balance" },
+        ]}
+        error={errors.accountId}
+        {...register("accountId")}
+      />
 
       {mutation.isError && (
         <p className="form-error" role="alert">
