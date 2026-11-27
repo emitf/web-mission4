@@ -1137,3 +1137,11 @@ h3 {
   background: var(--tile);
   font-size: 0.875rem;
 }
+
+/* "Update balances": saved / couldn't save, per row, after a partial save */
+.balance-status {
+  grid-column: 2 / -1;
+  justify-self: end;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}

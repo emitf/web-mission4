@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { balancesFormSchema } from "../schemas/account.js";
-import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
+import { centsToInput, today } from "../schemas/common.js";
 import { updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { toCents } from "../utils/money.js";
@@ -11,7 +11,7 @@ import FieldError from "./FieldError.jsx";
 import { useAccounts } from "../hooks/useServerData.js";
 import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
-const SYMBOL = { EUR: "€", USD: "$" };
+import { CURRENCY_INFO } from "../constants.js";
 
 // "Update balances": every account in one form, each with today's number
 // ready to overwrite. The quick weekly check-in: open, copy the numbers from
@@ -42,18 +42,38 @@ function BalancesForm({ onDone }) {
   const mutation = useMutation({
     // One PATCH per account, all at the same time. Even an unchanged number
     // gets today's date: you checked it, so it's up to date.
-    mutationFn: (rows) =>
-      Promise.all(
+    //
+    // Promise.allSettled (not Promise.all) waits for EVERY request and says which
+    // ones worked, so if one fails we know exactly which accounts were saved.
+    mutationFn: async (rows) => {
+      const results = await Promise.allSettled(
         rows.map((row) => updateAccount(row.id, { balance: row.balance, updatedAt: today() })),
-      ),
-    // onSettled (not onSuccess): if one PATCH fails, the others may already be
-    // saved, so we refresh the accounts either way.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-    onSuccess: async () => {
-      await recordSnapshot(); // today's point in the history
-      onDone("Balances updated");
+      );
+      const failedIds = rows.filter((_, i) => results[i].status === "rejected").map((r) => r.id);
+      if (failedIds.length === 0) return;
+
+      const names = accounts.filter((a) => failedIds.includes(a.id)).map((a) => a.name);
+      const saved = rows.length - failedIds.length;
+      const error = new Error(
+        `${saved} of ${rows.length} saved. ${names.join(", ")} couldn't be saved. ` +
+          "Press Save balances to try again.",
+      );
+      error.failedIds = failedIds; // used below to mark each row
+      error.savedCount = saved;
+      throw error;
     },
+    // onSettled (not onSuccess): even if some failed, the others are already
+    // saved, so we refresh the accounts and record today's history either way.
+    // Trying again is safe: PATCH is idempotent (the same balance twice = same result).
+    onSettled: async (_data, error) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      if (!error || error.savedCount > 0) await recordSnapshot();
+    },
+    onSuccess: () => onDone("Balances updated"),
   });
+
+  // After a partial save: which rows failed (the rest were saved)
+  const failedIds = mutation.error?.failedIds;
 
   if (accounts.length === 0) {
     return (
@@ -93,10 +113,7 @@ function BalancesForm({ onDone }) {
               <label htmlFor={inputId} className="balance-label">
                 {account.name}
                 {/* The € / $ next to the box is visual only, so say it for screen readers */}
-                <span className="visually-hidden">
-                  {" "}
-                  in {account.currency === "USD" ? "dollars" : "euros"}
-                </span>
+                <span className="visually-hidden"> in {CURRENCY_INFO[account.currency].name}</span>
               </label>
               <span className="money-input">
                 <input
@@ -106,11 +123,18 @@ function BalancesForm({ onDone }) {
                   autoComplete="off"
                   aria-invalid={error ? "true" : "false"}
                   aria-describedby={error ? errorId : undefined}
-                  {...register(`accounts.${index}.balance`, { setValueAs: toDotDecimal })}
+                  {...register(`accounts.${index}.balance`)}
                 />
-                <span aria-hidden="true">{SYMBOL[account.currency]}</span>
+                <span aria-hidden="true">{CURRENCY_INFO[account.currency].symbol}</span>
               </span>
               <FieldError id={errorId} error={error} />
+              {failedIds && (
+                <span
+                  className={`balance-status ${failedIds.includes(account.id) ? "negative" : "positive"}`}
+                >
+                  {failedIds.includes(account.id) ? "Couldn't save" : "✓ Saved"}
+                </span>
+              )}
             </li>
           );
         })}
