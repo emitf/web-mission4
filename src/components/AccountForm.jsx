@@ -2,26 +2,26 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { makeAccountFormSchema } from "../schemas/account.js";
-import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
+import { CURRENCIES, centsToInput, today } from "../schemas/common.js";
+import { ACCOUNT_TYPES, makeAccountFormSchema } from "../schemas/account.js";
 import { createAccount, deleteAccount, updateAccount } from "../services/accounts.js";
 import { queryKeys } from "../queryKeys.js";
 import { toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
-import FieldError from "./FieldError.jsx";
+import { ChoiceField, TextField } from "./Field.jsx";
+import { ACCOUNT_TYPE_LABELS, CURRENCY_INFO } from "../constants.js";
 import { useAccounts } from "../hooks/useServerData.js";
 import { useRecordSnapshot } from "../hooks/useRecordSnapshot.js";
 
-const TYPES = [
-  { value: "bank", label: "Bank" },
-  { value: "savings", label: "Savings" },
-  { value: "cash", label: "Cash" },
-];
-
-const CURRENCIES = [
-  { value: "EUR", label: "Euros (€)" },
-  { value: "USD", label: "Dollars ($)" },
-];
+// The radio options, built from the allowed values (schemas) + their labels (constants)
+const TYPE_OPTIONS = ACCOUNT_TYPES.map((type) => ({
+  value: type,
+  label: ACCOUNT_TYPE_LABELS[type],
+}));
+const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
+  value: currency,
+  label: CURRENCY_INFO[currency].label,
+}));
 
 // One form for both jobs:
 // - account = undefined → create a new account (POST)
@@ -95,28 +95,21 @@ function AccountForm({ account, fixing = false, onDone }) {
     },
   });
 
-  const balanceField = (
-    <div className="field">
-      <label htmlFor="account-balance">Current balance</label>
-      <input
-        id="account-balance"
-        type="text"
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="0,00"
-        // When editing, the panel puts the cursor here first (see Dialog.jsx)
-        data-autofocus={isEdit ? "" : undefined}
-        aria-invalid={errors.balance ? "true" : "false"}
-        aria-describedby={
-          errors.balance ? "account-balance-hint account-balance-error" : "account-balance-hint"
-        }
-        {...register("balance", { setValueAs: toDotDecimal })}
-      />
-      <p id="account-balance-hint" className="hint">
-        What your bank app or wallet shows right now.
-      </p>
-      <FieldError id="account-balance-error" error={errors.balance} />
-    </div>
+  // A function (not a ready-made element) so the field is registered at the
+  // place it appears on screen: React Hook Form focuses the first wrong field
+  // in the order the fields were registered.
+  const balanceField = () => (
+    <TextField
+      id="account-balance"
+      label="Current balance"
+      hint="What your bank app or wallet shows right now."
+      error={errors.balance}
+      inputMode="decimal"
+      placeholder="0,00"
+      // When editing, the panel puts the cursor here first (see Dialog.jsx)
+      data-autofocus={isEdit ? "" : undefined}
+      {...register("balance")}
+    />
   );
 
   return (
@@ -138,63 +131,33 @@ function AccountForm({ account, fixing = false, onDone }) {
       )}
 
       {/* Balance-first: when editing, the number you came to change goes on top */}
-      {isEdit && balanceField}
+      {isEdit && balanceField()}
 
-      <div className="field">
-        <label htmlFor="account-name">Name</label>
-        <input
-          id="account-name"
-          type="text"
-          autoComplete="off"
-          placeholder="e.g. BBVA, Revolut, Wallet"
-          aria-invalid={errors.name ? "true" : "false"}
-          aria-describedby={errors.name ? "account-name-error" : undefined}
-          {...register("name")}
-        />
-        <FieldError id="account-name-error" error={errors.name} />
-      </div>
+      <TextField
+        id="account-name"
+        label="Name"
+        placeholder="e.g. BBVA, Revolut, Wallet"
+        error={errors.name}
+        {...register("name")}
+      />
 
-      {/* A group of radios: the legend is read once for the whole group */}
-      <fieldset className="field" aria-describedby={errors.type ? "account-type-error" : undefined}>
-        <legend>Type</legend>
-        <div className="choice-group">
-          {TYPES.map((type) => (
-            <label key={type.value} className="choice">
-              <input
-                type="radio"
-                value={type.value}
-                aria-invalid={errors.type ? "true" : "false"}
-                {...register("type")}
-              />
-              <span>{type.label}</span>
-            </label>
-          ))}
-        </div>
-        <FieldError id="account-type-error" error={errors.type} />
-      </fieldset>
+      <ChoiceField
+        id="account-type"
+        legend="Type"
+        options={TYPE_OPTIONS}
+        error={errors.type}
+        registration={register("type")}
+      />
 
-      <fieldset
-        className="field"
-        aria-describedby={errors.currency ? "account-currency-error" : undefined}
-      >
-        <legend>Currency</legend>
-        <div className="choice-group">
-          {CURRENCIES.map((currency) => (
-            <label key={currency.value} className="choice">
-              <input
-                type="radio"
-                value={currency.value}
-                aria-invalid={errors.currency ? "true" : "false"}
-                {...register("currency")}
-              />
-              <span>{currency.label}</span>
-            </label>
-          ))}
-        </div>
-        <FieldError id="account-currency-error" error={errors.currency} />
-      </fieldset>
+      <ChoiceField
+        id="account-currency"
+        legend="Currency"
+        options={CURRENCY_OPTIONS}
+        error={errors.currency}
+        registration={register("currency")}
+      />
 
-      {!isEdit && balanceField}
+      {!isEdit && balanceField()}
 
       {/* Errors from the server (not from the rules) */}
       {saveMutation.isError && (

@@ -2,10 +2,7 @@ import Icon from "./Icon.jsx";
 import { daysAgoText, daysBetween, formatMoney, toCents, toDisplayCents } from "../utils/money.js";
 import { today } from "../schemas/common.js";
 
-const TYPE_LABELS = { bank: "Bank", savings: "Savings", cash: "Cash" };
-
-// After two weeks without checking, the number is probably out of date
-const STALE_AFTER_DAYS = 14;
+import { ACCOUNT_TYPE_LABELS, STALE_AFTER_DAYS } from "../constants.js";
 
 function AccountRow({ account, displayCurrency, rate, onEdit }) {
   const balanceCents = toCents(account.balance);
@@ -33,7 +30,7 @@ function AccountRow({ account, displayCurrency, rate, onEdit }) {
             {account.name}
           </span>
           <span className="row-sub">
-            {TYPE_LABELS[account.type]}
+            {ACCOUNT_TYPE_LABELS[account.type]}
             {daysSinceUpdate !== null && (
               <span className={isStale ? "stale" : ""}>
                 {" "}

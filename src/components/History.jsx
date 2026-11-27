@@ -7,7 +7,7 @@ import { formatMoney, formatShortDate, toCents } from "../utils/money.js";
 import ConfirmDelete from "./ConfirmDelete.jsx";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
-const SHOW_AT_FIRST = 8;
+import { HISTORY_SHOWN_AT_FIRST } from "../constants.js";
 
 // How my total changed over time: a small chart plus the list of records.
 // Each record is a "photo" taken the last time a balance changed that day.
@@ -34,7 +34,7 @@ function History({ displayCurrency }) {
       return { ...record, change };
     })
     .reverse();
-  const visible = showAll ? newestFirst : newestFirst.slice(0, SHOW_AT_FIRST);
+  const visible = showAll ? newestFirst : newestFirst.slice(0, HISTORY_SHOWN_AT_FIRST);
 
   return (
     <section className="section" aria-labelledby="history-title">
@@ -72,7 +72,7 @@ function History({ displayCurrency }) {
         </ul>
       )}
 
-      {newestFirst.length > SHOW_AT_FIRST && (
+      {newestFirst.length > HISTORY_SHOWN_AT_FIRST && (
         <button
           type="button"
           className="link-button toggle-paid"

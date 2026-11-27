@@ -1,6 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getRate } from "../services/rates.js";
 import { queryKeys } from "../queryKeys.js";
+import { RATE_STALE_TIME_MS } from "../constants.js";
 
 // The settings of the rate query in one place (TanStack v5 queryOptions), so
 // the components (useQuery) and the history recorder (fetchQuery) share the
@@ -9,10 +10,7 @@ export function rateQuery(from, to) {
   return queryOptions({
     queryKey: queryKeys.rate(from, to),
     queryFn: ({ signal }) => getRate({ base: from, target: to, signal }),
-    // The European Central Bank publishes new rates once a day, so a rate is
-    // still good for a long time. Asking again every time a component mounts or
-    // the window gets focus would be wasted requests: we keep it 1 hour.
-    staleTime: 60 * 60 * 1000,
+    staleTime: RATE_STALE_TIME_MS, // 1 hour: see constants.js for why
   });
 }
 

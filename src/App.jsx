@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { NOTICE_DURATION_MS } from "./constants.js";
 import AppHeader from "./components/AppHeader.jsx";
 import TotalBalance from "./components/TotalBalance.jsx";
 import SummaryTiles from "./components/SummaryTiles.jsx";
@@ -41,7 +42,7 @@ function App() {
     if (message) {
       setNotice(message);
       clearTimeout(noticeTimer.current);
-      noticeTimer.current = setTimeout(() => setNotice(""), 4000);
+      noticeTimer.current = setTimeout(() => setNotice(""), NOTICE_DURATION_MS);
     }
   }
 

@@ -2,22 +2,25 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { iouFormSchema } from "../schemas/iou.js";
-import { centsToInput, toDotDecimal, today } from "../schemas/common.js";
+import { IOU_DIRECTIONS, iouFormSchema } from "../schemas/iou.js";
+import { CURRENCIES, centsToInput, today } from "../schemas/common.js";
 import { createIou, updateIou } from "../services/ious.js";
 import { queryKeys } from "../queryKeys.js";
 import { addDays, toCents } from "../utils/money.js";
-import FieldError from "./FieldError.jsx";
+import { ChoiceField, TextField } from "./Field.jsx";
+import { CURRENCY_INFO, DEFAULT_DUE_IN_DAYS, IOU_DIRECTION_LABELS } from "../constants.js";
 
-const DIRECTIONS = [
-  { value: "owedToMe", label: "They owe me" },
-  { value: "iOwe", label: "I owe them" },
-];
-
-const CURRENCIES = [
-  { value: "EUR", label: "€" },
-  { value: "USD", label: "$" },
-];
+// The radio options, built from the allowed values (schemas) + their labels (constants)
+const DIRECTION_OPTIONS = IOU_DIRECTIONS.map((direction) => ({
+  value: direction,
+  label: IOU_DIRECTION_LABELS[direction],
+}));
+// Shown as just "€" / "$", so screen readers get the full name instead
+const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
+  value: currency,
+  label: CURRENCY_INFO[currency].symbol,
+  ariaLabel: CURRENCY_INFO[currency].label,
+}));
 
 // One form for both jobs, like the account form:
 // - iou = undefined → add a new IOU (POST)
@@ -54,7 +57,7 @@ function IouForm({ iou, fixing = false, onDone }) {
           amount: "",
           currency: "EUR",
           dateLent: today(),
-          dueDate: addDays(today(), 14), // two weeks is a sensible default
+          dueDate: addDays(today(), DEFAULT_DUE_IN_DAYS),
           note: "",
         },
   });
@@ -85,113 +88,68 @@ function IouForm({ iou, fixing = false, onDone }) {
           This IOU had data that didn&apos;t look right. Fix the marked fields and save.
         </p>
       )}
-      <fieldset className="field">
-        <legend className="visually-hidden">Who owes whom?</legend>
-        <div className="segmented segmented-wide">
-          {DIRECTIONS.map((option) => (
-            <label key={option.value} className="segmented-option">
-              <input type="radio" value={option.value} {...register("direction")} />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </div>
-        <FieldError id="iou-direction-error" error={errors.direction} />
-      </fieldset>
+      <ChoiceField
+        id="iou-direction"
+        legend="Who owes whom?"
+        hideLegend
+        variant="segmented"
+        options={DIRECTION_OPTIONS}
+        error={errors.direction}
+        registration={register("direction")}
+      />
 
-      <div className="field">
-        <label htmlFor="iou-person">Person</label>
-        <input
-          id="iou-person"
-          type="text"
-          autoComplete="off"
-          placeholder="e.g. Lucía"
-          aria-invalid={errors.person ? "true" : "false"}
-          aria-describedby={errors.person ? "iou-person-error" : undefined}
-          {...register("person")}
+      <TextField
+        id="iou-person"
+        label="Person"
+        placeholder="e.g. Lucía"
+        error={errors.person}
+        {...register("person")}
+      />
+
+      <div className="field-row">
+        <TextField
+          id="iou-amount"
+          label="Amount"
+          inputMode="decimal"
+          placeholder="0,00"
+          error={errors.amount}
+          {...register("amount")}
         />
-        <FieldError id="iou-person-error" error={errors.person} />
+        <ChoiceField
+          id="iou-currency"
+          legend="Currency"
+          options={CURRENCY_OPTIONS}
+          error={errors.currency}
+          registration={register("currency")}
+        />
       </div>
 
       <div className="field-row">
-        <div className="field">
-          <label htmlFor="iou-amount">Amount</label>
-          <input
-            id="iou-amount"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0,00"
-            aria-invalid={errors.amount ? "true" : "false"}
-            aria-describedby={errors.amount ? "iou-amount-error" : undefined}
-            {...register("amount", { setValueAs: toDotDecimal })}
-          />
-          <FieldError id="iou-amount-error" error={errors.amount} />
-        </div>
-
-        <fieldset
-          className="field"
-          aria-describedby={errors.currency ? "iou-currency-error" : undefined}
-        >
-          <legend>Currency</legend>
-          <div className="choice-group">
-            {CURRENCIES.map((currency) => (
-              <label key={currency.value} className="choice">
-                <input
-                  type="radio"
-                  value={currency.value}
-                  aria-label={currency.value === "EUR" ? "Euros" : "Dollars"}
-                  {...register("currency")}
-                />
-                <span aria-hidden="true">{currency.label}</span>
-              </label>
-            ))}
-          </div>
-          <FieldError id="iou-currency-error" error={errors.currency} />
-        </fieldset>
-      </div>
-
-      <div className="field-row">
-        <div className="field">
-          <label htmlFor="iou-date-lent">Date lent</label>
-          <input
-            id="iou-date-lent"
-            type="date"
-            max={today()}
-            aria-invalid={errors.dateLent ? "true" : "false"}
-            aria-describedby={errors.dateLent ? "iou-date-lent-error" : undefined}
-            {...register("dateLent")}
-          />
-          <FieldError id="iou-date-lent-error" error={errors.dateLent} />
-        </div>
-
-        <div className="field">
-          <label htmlFor="iou-due-date">Due date</label>
-          <input
-            id="iou-due-date"
-            type="date"
-            aria-invalid={errors.dueDate ? "true" : "false"}
-            aria-describedby={errors.dueDate ? "iou-due-date-error" : undefined}
-            {...register("dueDate")}
-          />
-          <FieldError id="iou-due-date-error" error={errors.dueDate} />
-        </div>
-      </div>
-
-      <div className="field">
-        <label htmlFor="iou-note">
-          What for? <span className="optional">(optional)</span>
-        </label>
-        <input
-          id="iou-note"
-          type="text"
-          autoComplete="off"
-          placeholder="e.g. Concert ticket"
-          aria-invalid={errors.note ? "true" : "false"}
-          aria-describedby={errors.note ? "iou-note-error" : undefined}
-          {...register("note")}
+        <TextField
+          id="iou-date-lent"
+          label="Date lent"
+          type="date"
+          max={today()}
+          error={errors.dateLent}
+          {...register("dateLent")}
         />
-        <FieldError id="iou-note-error" error={errors.note} />
+        <TextField
+          id="iou-due-date"
+          label="Due date"
+          type="date"
+          error={errors.dueDate}
+          {...register("dueDate")}
+        />
       </div>
+
+      <TextField
+        id="iou-note"
+        label="What for?"
+        optional
+        placeholder="e.g. Concert ticket"
+        error={errors.note}
+        {...register("note")}
+      />
 
       {mutation.isError && (
         <p className="form-error" role="alert">

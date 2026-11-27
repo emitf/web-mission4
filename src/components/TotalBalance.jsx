@@ -3,12 +3,8 @@ import { useRejectedAccounts, useRejectedIous } from "../hooks/useServerData.js"
 import { formatMoney, formatShortDate, otherCurrency, splitMoney } from "../utils/money.js";
 import { LoadingRows, QueryError, UpdatingBadge } from "./QueryStatus.jsx";
 
-const CURRENCY_OPTIONS = [
-  { value: "EUR", label: "€", name: "euros" },
-  { value: "USD", label: "$", name: "dollars" },
-];
-
-const SYMBOL = { EUR: "€", USD: "$" };
+import { CURRENCIES } from "../schemas/common.js";
+import { CURRENCY_INFO } from "../constants.js";
 
 function TotalBalance({ displayCurrency, onCurrencyChange }) {
   const summary = useMoneySummary(displayCurrency);
@@ -26,15 +22,15 @@ function TotalBalance({ displayCurrency, onCurrencyChange }) {
 
         {/* aria-pressed tells screen readers which currency is selected */}
         <div className="segmented" role="group" aria-label="Show total in">
-          {CURRENCY_OPTIONS.map((option) => (
+          {CURRENCIES.map((currency) => (
             <button
-              key={option.value}
+              key={currency}
               type="button"
-              aria-pressed={displayCurrency === option.value}
-              aria-label={`Show in ${option.name}`}
-              onClick={() => onCurrencyChange(option.value)}
+              aria-pressed={displayCurrency === currency}
+              aria-label={`Show in ${CURRENCY_INFO[currency].name}`}
+              onClick={() => onCurrencyChange(currency)}
             >
-              {option.label}
+              {CURRENCY_INFO[currency].symbol}
             </button>
           ))}
         </div>
@@ -119,9 +115,10 @@ function HeroAmount({ summary, displayCurrency }) {
 
       {rateQuery.data && (
         <p className="hero-note">
-          1 {SYMBOL[foreign]} ={" "}
+          1 {CURRENCY_INFO[foreign].symbol} ={" "}
           {rateQuery.data.rate.toLocaleString("es-ES", { maximumFractionDigits: 4 })}{" "}
-          {SYMBOL[displayCurrency]} · ECB rate from {formatShortDate(rateQuery.data.date)}
+          {CURRENCY_INFO[displayCurrency].symbol} · ECB rate from{" "}
+          {formatShortDate(rateQuery.data.date)}
         </p>
       )}
     </>
