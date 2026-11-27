@@ -34,3 +34,6 @@ db.demo.json
 
 # Local editor/assistant settings
 .claude
+
+# My private notes for the oral defense (not part of the submission)
+DEFENSE-NOTES.md
